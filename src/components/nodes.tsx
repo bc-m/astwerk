@@ -1,0 +1,67 @@
+import { Handle, Position, type NodeProps } from '@xyflow/react'
+import type { Gender } from '@/types'
+import type { PersonFlowNode, UnionFlowNode } from '@/lib/layout'
+import { birthNameLabel, displayName, lifespanLabel } from '@/lib/person'
+import { cn } from '@/lib/utils'
+
+const GENDER_ACCENT: Record<Gender, string> = {
+  m: 'border-l-sky-500',
+  f: 'border-l-rose-500',
+  d: 'border-l-violet-500',
+  u: 'border-l-slate-400',
+}
+
+const hiddenHandle = { opacity: 0, width: 4, height: 4, minWidth: 0, minHeight: 0 }
+
+export function PersonNode({ data }: NodeProps<PersonFlowNode>) {
+  const { person, selected, dimmed } = data
+  const dates = lifespanLabel(person)
+  const birthName = birthNameLabel(person)
+  return (
+    <div
+      data-dimmed={dimmed || undefined}
+      className={cn(
+        'flex h-[88px] w-[200px] cursor-pointer items-center gap-2.5 rounded-lg border border-l-4 bg-card px-3 shadow-sm transition-opacity transition-shadow hover:shadow-md',
+        GENDER_ACCENT[person.gender],
+        selected && 'ring-2 ring-ring',
+        dimmed && 'opacity-20',
+      )}
+    >
+      <Handle type="target" position={Position.Top} style={hiddenHandle} isConnectable={false} />
+      {person.photo && (
+        <img
+          src={person.photo}
+          alt=""
+          className="size-11 shrink-0 rounded-full object-cover"
+          draggable={false}
+        />
+      )}
+      <div className="flex min-w-0 flex-col justify-center">
+        <div className="truncate text-sm font-semibold">{displayName(person)}</div>
+        {birthName && (
+          <div className="truncate text-xs text-muted-foreground italic">{birthName}</div>
+        )}
+        {dates && <div className="mt-0.5 truncate text-xs text-muted-foreground">{dates}</div>}
+      </div>
+      <Handle type="source" position={Position.Bottom} style={hiddenHandle} isConnectable={false} />
+    </div>
+  )
+}
+
+export function UnionNode({ data }: NodeProps<UnionFlowNode>) {
+  // Without children no "dot" — the node remains as an invisible
+  // anchor point for the partner line
+  const showDot = data.showDot === true
+  return (
+    <div
+      className={cn(
+        'size-4 rounded-full',
+        showDot && 'border-2 border-rose-400 bg-background',
+        data.dimmed === true && 'opacity-20',
+      )}
+    >
+      <Handle type="target" position={Position.Top} style={hiddenHandle} isConnectable={false} />
+      <Handle type="source" position={Position.Bottom} style={hiddenHandle} isConnectable={false} />
+    </div>
+  )
+}
