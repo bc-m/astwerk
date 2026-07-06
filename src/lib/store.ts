@@ -25,6 +25,8 @@ interface TreeState {
   viewMode: 'tree' | 'list'
   /** Person whose lineage is highlighted (all others are dimmed). */
   focusLineageId: string | null
+  /** Person whose ancestors-only view is shown (everyone else is hidden). */
+  ancestorFocusId: string | null
   /** Color scheme: light, dark or system preference. */
   theme: 'light' | 'dark' | 'system'
   /** Counter: requests the canvas to fit the full view (only on load/import). */
@@ -39,6 +41,8 @@ interface TreeState {
   /** Trigger image/PDF export; switches to tree view if needed. */
   requestImageExport: (format: 'png' | 'pdf') => void
   toggleFocusLineage: (id: string) => void
+  /** Toggles the ancestors-only view for a person. */
+  toggleAncestorFocus: (id: string) => void
   selectPerson: (id: string | null) => void
   /** Select and scroll into view in the tree. */
   focusPerson: (id: string) => void
@@ -82,6 +86,7 @@ export const useTreeStore = create<TreeState>()(
         focusPersonId: null,
         viewMode: 'tree',
         focusLineageId: null,
+        ancestorFocusId: null,
         theme: 'system',
         fitRequestCounter: 0,
         imageExportFormat: 'png',
@@ -97,7 +102,9 @@ export const useTreeStore = create<TreeState>()(
             imageExportCounter: s.imageExportCounter + 1,
           })),
         toggleFocusLineage: (id) =>
-          set((s) => ({focusLineageId: s.focusLineageId === id ? null : id})),
+          set((s) => ({focusLineageId: s.focusLineageId === id ? null : id, ancestorFocusId: null})),
+        toggleAncestorFocus: (id) =>
+          set((s) => ({ancestorFocusId: s.ancestorFocusId === id ? null : id, focusLineageId: null})),
         selectPerson: (id) => set({selectedPersonId: id}),
         focusPerson: (id) => set({selectedPersonId: id, focusPersonId: id}),
         clearFocus: () => set({focusPersonId: null}),
@@ -137,6 +144,7 @@ export const useTreeStore = create<TreeState>()(
               unions,
               selectedPersonId: s.selectedPersonId === id ? null : s.selectedPersonId,
               focusLineageId: s.focusLineageId === id ? null : s.focusLineageId,
+              ancestorFocusId: s.ancestorFocusId === id ? null : s.ancestorFocusId,
             }
           }),
 
@@ -332,6 +340,7 @@ export const useTreeStore = create<TreeState>()(
             unions: {},
             selectedPersonId: null,
             focusLineageId: null,
+            ancestorFocusId: null,
           }),
 
         loadFile: (file) =>
@@ -341,6 +350,7 @@ export const useTreeStore = create<TreeState>()(
             unions: Object.fromEntries(file.unions.map((u) => [u.id, u])),
             selectedPersonId: null,
             focusLineageId: null,
+            ancestorFocusId: null,
             fitRequestCounter: s.fitRequestCounter + 1,
           })),
 
