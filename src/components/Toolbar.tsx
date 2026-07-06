@@ -87,7 +87,7 @@ export function Toolbar() {
   }
 
   return (
-    <header className="flex items-center gap-3 border-b bg-card px-4 py-2.5">
+    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b bg-card px-4 py-2.5">
       <a
         href="https://github.com/bc-m/astwerk"
         target="_blank"
@@ -96,16 +96,16 @@ export function Toolbar() {
         className="flex items-center gap-2 hover:opacity-80"
       >
         <TreeDeciduousIcon className="size-5 text-emerald-600" />
-        <h1 className="text-sm font-semibold whitespace-nowrap">Astwerk</h1>
+        <h1 className="hidden text-sm font-semibold whitespace-nowrap sm:block">Astwerk</h1>
       </a>
-      <Separator orientation="vertical" className="!h-5" />
+      <Separator orientation="vertical" className="!h-5 hidden sm:block" />
       <Input
         value={treeName}
         onChange={(e) => setTreeName(e.target.value)}
         aria-label="Name des Stammbaums"
-        className="h-8 w-56"
+        className="h-8 w-36 sm:w-56"
       />
-      <span className="text-xs text-muted-foreground whitespace-nowrap">
+      <span className="hidden text-xs text-muted-foreground whitespace-nowrap sm:inline">
         {personCount} {personCount === 1 ? 'Person' : 'Personen'}
       </span>
       <div className="flex items-center rounded-lg border p-0.5">
