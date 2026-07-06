@@ -1,6 +1,6 @@
-import type { Edge, Node } from '@xyflow/react'
-import { lineageIdsOf } from '@/lib/relations'
-import type { Person, Union } from '@/types'
+import type {Edge, Node} from '@xyflow/react'
+import {lineageIdsOf} from '@/lib/relations'
+import type {Person, Union} from '@/types'
 
 export const PERSON_W = 200
 export const PERSON_H = 88
@@ -9,7 +9,7 @@ const UNION_SIZE = 16
 /** Gap between sibling blocks. */
 const H_GAP = 36
 /** Gap between partners of a couple. */
-const COUPLE_GAP = 36
+const COUPLE_GAP = 8
 /** Gap between independent subtrees. */
 const COMPONENT_GAP = 120
 /** Vertical distance between generations (center to center). */
@@ -35,8 +35,8 @@ export type FlowNode = PersonFlowNode | UnionFlowNode
 
 const DIMMED_OPACITY = 0.18
 
-const PARTNER_EDGE_STYLE = { stroke: 'var(--color-rose-400)', strokeWidth: 1.5 }
-const CHILD_EDGE_STYLE = { stroke: 'var(--color-slate-400)', strokeWidth: 1.5 }
+const PARTNER_EDGE_STYLE = {stroke: 'var(--color-rose-400)', strokeWidth: 1.5}
+const CHILD_EDGE_STYLE = {stroke: 'var(--color-slate-400)', strokeWidth: 1.5}
 
 interface BusSpan {
   unionId: string
@@ -61,7 +61,7 @@ function assignLevels(spans: BusSpan[]): Map<string, number> {
     while (used.has(level)) level++
     level = Math.min(level, MAX_LEVEL)
     levels.set(span.unionId, level)
-    active.push({ to: span.to, level })
+    active.push({to: span.to, level})
   }
   return levels
 }
@@ -166,19 +166,57 @@ function computePositions(
     extend('right')
     extend('left')
 
-    // Children of all unions in the chain first (determines block width)
-    let childCursor = left
+    // Lay out each child subtree, then pack them with contour nesting: a
+    // narrow branch slides into the empty space above or below a wider
+    // neighbour instead of reserving its full width at every generation.
+    // Only the generations two subtrees share can collide, so the block stays
+    // no wider than it has to be while parents remain centered over children.
+    const HALF = PERSON_W / 2
     const childIds: string[] = []
+    const rightContour = new Map<number, number>() // rightmost occupied edge per gen
+    let packedLeft = Infinity
+    let packedRight = -Infinity
     for (const u of rowUnions) {
       for (const cid of u.childIds) {
         if (!persons[cid] || placed.has(cid)) continue
-        if (childCursor > left) childCursor += H_GAP
-        const res = layoutBlock(cid, childCursor)
-        childCursor += res.width
+        const res = layoutBlock(cid, 0)
+        const minAt = new Map<number, number>()
+        const maxAt = new Map<number, number>()
+        for (const id of res.ids) {
+          const p = placed.get(id)!
+          minAt.set(p.gen, Math.min(minAt.get(p.gen) ?? Infinity, p.x))
+          maxAt.set(p.gen, Math.max(maxAt.get(p.gen) ?? -Infinity, p.x))
+        }
+        // Smallest rightward shift that clears the accumulated right contour
+        // by H_GAP on every generation this subtree occupies.
+        let shift = -Infinity
+        for (const [gen, mn] of minAt) {
+          const edge = rightContour.get(gen)
+          if (edge !== undefined) shift = Math.max(shift, edge + H_GAP - (mn - HALF))
+        }
+        if (shift === -Infinity) shift = 0
+        for (const id of res.ids) {
+          const p = placed.get(id)!
+          placed.set(id, {...p, x: p.x + shift})
+        }
+        for (const [gen, mx] of maxAt) {
+          const edge = mx + shift + HALF
+          rightContour.set(gen, Math.max(rightContour.get(gen) ?? -Infinity, edge))
+          packedRight = Math.max(packedRight, edge)
+        }
+        for (const mn of minAt.values()) packedLeft = Math.min(packedLeft, mn + shift - HALF)
         childIds.push(...res.ids)
       }
     }
-    const childrenWidth = Math.max(0, childCursor - left)
+    // Normalise so the packed children block starts at `left`.
+    if (childIds.length > 0 && packedLeft !== left) {
+      const dx = left - packedLeft
+      for (const id of childIds) {
+        const p = placed.get(id)!
+        placed.set(id, {...p, x: p.x + dx})
+      }
+    }
+    const childrenWidth = childIds.length > 0 ? packedRight - packedLeft : 0
 
     const rowWidth = row.length * PERSON_W + (row.length - 1) * COUPLE_GAP
     const width = Math.max(rowWidth, childrenWidth, PERSON_W)
@@ -194,11 +232,11 @@ function computePositions(
       const dx = (width - childrenWidth) / 2
       for (const cid of childIds) {
         const pos = placed.get(cid)!
-        placed.set(cid, { ...pos, x: pos.x + dx })
+        placed.set(cid, {...pos, x: pos.x + dx})
       }
     }
     ids.push(...childIds)
-    return { width, ids }
+    return {width, ids}
   }
 
   let cursor = 0
@@ -237,19 +275,19 @@ function computePositions(
 
   compactBlocks(blocks, placed, unionList)
 
-  return { placed }
+  return {placed}
 }
 
-/** Gap kept between a nestled block and its neighbours on a shared rank. */
-const COMPACT_GAP = 40
+/**
+ * Gap kept between a nestled block and its neighbours on a shared rank.
+ * Roughly one box wide so separate couples read as visually distinct.
+ */
+const COMPACT_GAP = 32
 
 interface CompactGroup {
   members: Set<string>
   /** Per generation: [min center x, max center x] of the group's persons. */
   gens: Map<number, [number, number]>
-  center: number
-  /** Desired center x — above the children living outside this group. */
-  ideal: number | null
   size: number
 }
 
@@ -299,10 +337,8 @@ function compactBlocks(
   for (const ids of byRoot.values()) {
     const gi = groups.length
     const gens = new Map<number, [number, number]>()
-    let sum = 0
     for (const id of ids) {
       const pos = placed.get(id)!
-      sum += pos.x
       const span = gens.get(pos.gen)
       if (span) {
         span[0] = Math.min(span[0], pos.x)
@@ -312,39 +348,30 @@ function compactBlocks(
       }
       groupOf.set(id, gi)
     }
-    groups.push({ members: new Set(ids), gens, center: sum / ids.length, ideal: null, size: ids.length })
+    groups.push({members: new Set(ids), gens, size: ids.length})
   }
 
-  // Ideal position: the average x of everything this group connects to
-  // outside itself. A cross-group union pulls in both directions — the parent
-  // couple toward its child, and the child's subtree toward its parents — so
-  // both in-married ancestors and descendant subtrees close the gap.
-  const targets: number[][] = groups.map(() => [])
+  // For each group, the persons it connects to outside itself. A cross-group
+  // union pulls both ways: the parent couple toward its child, and the child's
+  // subtree toward its parents. Positions are read live while packing (below),
+  // so a couple still finds its child after that child's block has moved.
+  const targetIds: string[][] = groups.map(() => [])
   for (const u of unionList) {
-    const partnerXs = u.partnerIds.map((id) => placed.get(id)?.x).filter((v): v is number => v !== undefined)
-    if (partnerXs.length === 0) continue
-    const unionX = (Math.min(...partnerXs) + Math.max(...partnerXs)) / 2
     const owners = new Set(u.partnerIds.filter((id) => groupOf.has(id)).map((id) => groupOf.get(id)!))
     const owner = owners.size === 1 ? [...owners][0] : null
+    if (owner === null) continue
     for (const cid of u.childIds) {
-      const pos = placed.get(cid)
       const cg = groupOf.get(cid)
-      if (pos === undefined || cg === undefined) continue
-      if (owner !== null && cg !== owner) {
-        targets[owner].push(pos.x) // parents pulled toward their child
-        targets[cg].push(unionX) // child's subtree pulled toward its parents
-      }
+      if (cg === undefined || cg === owner) continue
+      targetIds[owner].push(cid)
+      for (const pid of u.partnerIds) if (groupOf.get(pid) === owner) targetIds[cg].push(pid)
     }
   }
-  groups.forEach((g, i) => {
-    const xs = targets[i]
-    if (xs.length > 0) g.ideal = xs.reduce((a, b) => a + b, 0) / xs.length
-  })
 
-  // The largest group anchors the canvas and is placed first. The rest follow
-  // top generation first: the upper ranks are sparsely filled, so ancestor
-  // couples claim their slot above their child there before the denser lower
-  // blocks move in. Larger blocks win ties.
+  // The largest group anchors the canvas and never moves. The rest follow top
+  // generation first, larger blocks winning ties, so ancestor couples claim
+  // their slot above their child in the sparse upper ranks before the denser
+  // lower blocks move in.
   const minGen = groups.map((g) => Math.min(...g.gens.keys()))
   let anchor = 0
   for (let i = 1; i < groups.length; i++) if (groups[i].size > groups[anchor].size) anchor = i
@@ -354,56 +381,142 @@ function compactBlocks(
     if (b === anchor) return 1
     return minGen[a] - minGen[b] || groups[b].size - groups[a].size
   })
-  const occupancy = new Map<number, [number, number][]>()
-  const occupy = (g: CompactGroup, shift: number) => {
-    for (const [gen, [lo, hi]] of g.gens) {
-      const list = occupancy.get(gen) ?? []
-      list.push([lo + shift - HALF, hi + shift + HALF])
-      occupancy.set(gen, list)
+
+  const memberList = groups.map((g) => [...g.members])
+  const avg = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
+  // Live geometry (centre and per-generation span) from current positions.
+  const geomOf = (gi: number) => {
+    const gens = new Map<number, [number, number]>()
+    let sum = 0
+    for (const id of memberList[gi]) {
+      const p = placed.get(id)!
+      sum += p.x
+      const span = gens.get(p.gen)
+      if (span) {
+        span[0] = Math.min(span[0], p.x)
+        span[1] = Math.max(span[1], p.x)
+      } else gens.set(p.gen, [p.x, p.x])
     }
+    return {center: sum / memberList[gi].length, gens}
   }
 
-  order.forEach((gi, rank) => {
-    const g = groups[gi]
-    if (rank === 0) {
-      occupy(g, 0) // anchor stays put
-      return
-    }
-    // Desired shift: toward the ideal (above outside children), else stay.
-    const wanted = g.ideal === null ? 0 : g.ideal - g.center
-    // Collect forbidden shift intervals from every occupied span the group
-    // would overlap on any generation it spans.
-    const forbidden: [number, number][] = []
-    for (const [gen, [lo, hi]] of g.gens) {
-      for (const [oLo, oHi] of occupancy.get(gen) ?? []) {
-        const a = oLo - COMPACT_GAP - hi - HALF
-        const b = oHi + COMPACT_GAP - lo + HALF
-        if (a < b) forbidden.push([a, b])
+  // A few passes let a couple settle next to its child even when that child
+  // only reached its final spot in an earlier pass (targets are re-read live).
+  for (let pass = 0; pass < 3; pass++) {
+    const occupancy = new Map<number, [number, number][]>()
+    const occupy = (gens: Map<number, [number, number]>, shift: number) => {
+      for (const [gen, [lo, hi]] of gens) {
+        const list = occupancy.get(gen) ?? []
+        list.push([lo + shift - HALF, hi + shift + HALF])
+        occupancy.set(gen, list)
       }
     }
-    let shift = wanted
-    if (forbidden.length > 0) {
-      forbidden.sort((x, y) => x[0] - y[0])
-      const merged: [number, number][] = [[...forbidden[0]]]
-      for (let i = 1; i < forbidden.length; i++) {
-        const last = merged[merged.length - 1]
-        if (forbidden[i][0] <= last[1]) last[1] = Math.max(last[1], forbidden[i][1])
-        else merged.push([...forbidden[i]])
+    for (const [rank, gi] of order.entries()) {
+      const {center, gens} = geomOf(gi)
+      if (rank === 0) {
+        occupy(gens, 0) // anchor stays put
+        continue
       }
-      const blocker = merged.find(([a, b]) => wanted > a && wanted < b)
-      if (blocker) {
-        // Snap to whichever free edge of the blocking interval is closer.
-        shift = wanted - blocker[0] <= blocker[1] - wanted ? blocker[0] : blocker[1]
+      const xs = targetIds[gi]
+        .map((id) => placed.get(id)?.x)
+        .filter((v): v is number => v !== undefined)
+      const wanted = xs.length ? avg(xs) - center : 0
+      // Forbidden shift intervals: any shift that would overlap an occupied
+      // span on a generation this group spans.
+      const forbidden: [number, number][] = []
+      for (const [gen, [lo, hi]] of gens) {
+        for (const [oLo, oHi] of occupancy.get(gen) ?? []) {
+          const a = oLo - COMPACT_GAP - hi - HALF
+          const b = oHi + COMPACT_GAP - lo + HALF
+          if (a < b) forbidden.push([a, b])
+        }
       }
+      let shift = wanted
+      if (forbidden.length > 0) {
+        forbidden.sort((x, y) => x[0] - y[0])
+        const merged: [number, number][] = [[...forbidden[0]]]
+        for (let i = 1; i < forbidden.length; i++) {
+          const last = merged[merged.length - 1]
+          if (forbidden[i][0] <= last[1]) last[1] = Math.max(last[1], forbidden[i][1])
+          else merged.push([...forbidden[i]])
+        }
+        const blocker = merged.find(([a, b]) => wanted > a && wanted < b)
+        if (blocker) shift = wanted - blocker[0] <= blocker[1] - wanted ? blocker[0] : blocker[1]
+      }
+      if (shift !== 0)
+        for (const id of memberList[gi]) {
+          const p = placed.get(id)!
+          placed.set(id, {...p, x: p.x + shift})
+        }
+      occupy(gens, shift)
     }
-    if (shift !== 0) {
-      for (const id of g.members) {
-        const pos = placed.get(id)!
-        placed.set(id, { ...pos, x: pos.x + shift })
-      }
+  }
+}
+
+/**
+ * Ancestor chart layout: the focus person sits at the bottom centre and the
+ * tree fans upward — narrow at the bottom, wider toward the older generations.
+ * Each couple is kept tight (partners side by side) and centred over their
+ * child; when their own ancestry is wide, the parents' fans are spread into
+ * separate slots above and reached by horizontal bus lanes rather than pulling
+ * the couple apart. `persons` is expected to already be reduced to the focus
+ * person and their ancestors.
+ */
+function computeAncestorPositions(
+  persons: Record<string, Person>,
+  unions: Record<string, Union>,
+  rootId: string,
+): { placed: Map<string, PlacedPos> } {
+  const placed = new Map<string, PlacedPos>()
+  const unionList = Object.values(unions)
+  const parentsOf = (id: string) => {
+    const pu = unionList.find((u) => u.childIds.includes(id) && u.partnerIds.some((p) => persons[p]))
+    return pu ? pu.partnerIds.filter((p) => persons[p]) : []
+  }
+
+  // Width a person's ancestor fan needs: the wider of their parents' tight
+  // couple and the sum of the parents' own fans. Memoised, cycle-guarded.
+  const fanCache = new Map<string, number>()
+  const computing = new Set<string>()
+  const fanWidth = (id: string): number => {
+    const cached = fanCache.get(id)
+    if (cached !== undefined) return cached
+    if (computing.has(id)) return PERSON_W
+    computing.add(id)
+    const parents = parentsOf(id)
+    let width = PERSON_W
+    if (parents.length > 0) {
+      const coupleW = parents.length * PERSON_W + (parents.length - 1) * COUPLE_GAP
+      const fansW =
+        parents.reduce((s, p) => s + fanWidth(p), 0) + (parents.length - 1) * H_GAP
+      width = Math.max(coupleW, fansW)
     }
-    occupy(g, shift)
-  })
+    computing.delete(id)
+    fanCache.set(id, width)
+    return width
+  }
+
+  const placed_ = new Set<string>()
+  const place = (id: string, boxX: number, regionCenter: number, depth: number) => {
+    if (placed_.has(id)) return // pedigree collapse / cycle guard
+    placed_.add(id)
+    placed.set(id, {x: boxX, gen: -depth})
+    const parents = parentsOf(id).filter((p) => !placed_.has(p))
+    if (parents.length === 0) return
+    const coupleW = parents.length * PERSON_W + (parents.length - 1) * COUPLE_GAP
+    const fans = parents.map(fanWidth)
+    const fansW = fans.reduce((s, w) => s + w, 0) + (parents.length - 1) * H_GAP
+    const coupleLeft = regionCenter - coupleW / 2 // couple stays tight, centred on the child
+    let fanCur = regionCenter - fansW / 2 // fans spread symmetrically above
+    parents.forEach((p, i) => {
+      const px = coupleLeft + i * (PERSON_W + COUPLE_GAP) + PERSON_W / 2
+      const slotCenter = fanCur + fans[i] / 2
+      fanCur += fans[i] + H_GAP
+      place(p, px, slotCenter, depth + 1)
+    })
+  }
+  if (persons[rootId]) place(rootId, 0, 0, 0)
+  return {placed}
 }
 
 export function buildFlowGraph(
@@ -411,13 +524,17 @@ export function buildFlowGraph(
   unions: Record<string, Union>,
   selectedPersonId: string | null,
   focusLineageId: string | null = null,
+  ancestorRootId: string | null = null,
 ): { nodes: FlowNode[]; edges: Edge[] } {
   // Focus mode: everything outside the lineage is dimmed
   const lineage =
     focusLineageId && persons[focusLineageId] ? lineageIdsOf(unions, focusLineageId) : null
 
   const unionList = Object.values(unions)
-  const { placed } = computePositions(persons, unions)
+  const {placed} =
+    ancestorRootId && persons[ancestorRootId]
+      ? computeAncestorPositions(persons, unions, ancestorRootId)
+      : computePositions(persons, unions)
 
   // Union dots: centered between partners, at half height to the next generation
   const unionPoint = new Map<string, { x: number; y: number }>()
@@ -429,7 +546,7 @@ export function buildFlowGraph(
     const xs = partnerPos.map((p) => p.x)
     const x = (Math.min(...xs) + Math.max(...xs)) / 2
     const gen = Math.max(...partnerPos.map((p) => p.gen))
-    unionPoint.set(u.id, { x, y: gen * GEN_V + UNION_OFFSET_Y })
+    unionPoint.set(u.id, {x, y: gen * GEN_V + UNION_OFFSET_Y})
   }
 
   // Determine collision levels for the horizontal buses, grouped per rank
@@ -480,7 +597,9 @@ export function buildFlowGraph(
     nodes.push({
       id: p.id,
       type: 'person',
-      position: { x: pos.x - PERSON_W / 2, y: pos.gen * GEN_V - PERSON_H / 2 },
+      position: {x: pos.x - PERSON_W / 2, y: pos.gen * GEN_V - PERSON_H / 2},
+      width: PERSON_W,
+      height: PERSON_H,
       data: {
         person: p,
         selected: p.id === selectedPersonId,
@@ -503,8 +622,10 @@ export function buildFlowGraph(
     nodes.push({
       id: u.id,
       type: 'union',
-      position: { x: point.x - UNION_SIZE / 2, y: point.y - UNION_SIZE / 2 },
-      data: { showDot: hasChildren, dimmed: !unionActive },
+      position: {x: point.x - UNION_SIZE / 2, y: point.y - UNION_SIZE / 2},
+      width: UNION_SIZE,
+      height: UNION_SIZE,
+      data: {showDot: hasChildren, dimmed: !unionActive},
     })
     // Without a dot the partner line runs directly through the (invisible) anchor point
     const partnerBusY =
@@ -522,8 +643,8 @@ export function buildFlowGraph(
         source: pid,
         target: u.id,
         type: 'elbow',
-        data: hasChildren ? { midY: partnerBusY } : { snapToTarget: true },
-        style: active ? PARTNER_EDGE_STYLE : { ...PARTNER_EDGE_STYLE, opacity: DIMMED_OPACITY },
+        data: hasChildren ? {midY: partnerBusY} : {snapToTarget: true},
+        style: active ? PARTNER_EDGE_STYLE : {...PARTNER_EDGE_STYLE, opacity: DIMMED_OPACITY},
       })
     }
     for (const cid of u.childIds) {
@@ -534,11 +655,11 @@ export function buildFlowGraph(
         source: u.id,
         target: cid,
         type: 'elbow',
-        data: { midY: childBusY },
-        style: active ? CHILD_EDGE_STYLE : { ...CHILD_EDGE_STYLE, opacity: DIMMED_OPACITY },
+        data: {midY: childBusY},
+        style: active ? CHILD_EDGE_STYLE : {...CHILD_EDGE_STYLE, opacity: DIMMED_OPACITY},
       })
     }
   }
 
-  return { nodes, edges }
+  return {nodes, edges}
 }
