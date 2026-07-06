@@ -12,6 +12,8 @@ const H_GAP = 36
 const COUPLE_GAP = 8
 /** Gap between independent subtrees. */
 const COMPONENT_GAP = 120
+/** Width a fully empty vertical strip is trimmed to when collapsing it. */
+const DEAD_COLUMN_GAP = 120
 /** Vertical distance between generations (center to center). */
 const GEN_V = 216
 /** The union dot sits halfway between generations. */
@@ -274,8 +276,43 @@ function computePositions(
   }
 
   compactBlocks(blocks, placed, unionList)
+  removeDeadColumns(placed)
 
   return {placed}
+}
+
+/**
+ * Collapses vertical strips of the canvas that hold no box on any generation.
+ * Such a column is only crossed by horizontal edges, so everything to its
+ * right can slide left with no risk of overlap — this closes the wide empty
+ * bands that appear between loosely connected branches. Each remaining gap
+ * between clusters is trimmed to DEAD_COLUMN_GAP.
+ */
+function removeDeadColumns(placed: Map<string, PlacedPos>): void {
+  if (placed.size === 0) return
+  const HALF = PERSON_W / 2
+  const boxes = [...placed.values()].map((p) => [p.x - HALF, p.x + HALF] as [number, number])
+  boxes.sort((a, b) => a[0] - b[0])
+  // Merge the occupied x-intervals across all generations.
+  const merged: [number, number][] = [[...boxes[0]]]
+  for (const [lo, hi] of boxes.slice(1)) {
+    const last = merged[merged.length - 1]
+    if (lo <= last[1] + 0.5) last[1] = Math.max(last[1], hi)
+    else merged.push([lo, hi])
+  }
+  // Each gap wider than the target becomes a leftward shift for everything
+  // beyond it.
+  const cuts: { pos: number; amount: number }[] = []
+  for (let i = 1; i < merged.length; i++) {
+    const gap = merged[i][0] - merged[i - 1][1]
+    if (gap > DEAD_COLUMN_GAP + 0.5) cuts.push({ pos: merged[i][0], amount: gap - DEAD_COLUMN_GAP })
+  }
+  if (cuts.length === 0) return
+  for (const [id, p] of placed) {
+    let shift = 0
+    for (const c of cuts) if (c.pos <= p.x - HALF + 0.5) shift += c.amount
+    if (shift !== 0) placed.set(id, {...p, x: p.x - shift})
+  }
 }
 
 /**
