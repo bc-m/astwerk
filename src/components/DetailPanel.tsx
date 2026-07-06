@@ -6,9 +6,11 @@ import {
   HeartIcon,
   Link2Icon,
   Link2OffIcon,
+  NetworkIcon,
   Trash2Icon,
   UserPlusIcon,
   UsersIcon,
+  XIcon,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -43,7 +45,7 @@ import {
   partnerCandidates,
 } from '@/lib/relations'
 import { useTreeStore } from '@/lib/store'
-import { GENDER_OPTIONS, type Gender, type Person } from '@/types'
+import { COUNTRY_OPTIONS, GENDER_OPTIONS, type Gender, type Person } from '@/types'
 
 type PickerMode =
   | { kind: 'partner' }
@@ -51,6 +53,11 @@ type PickerMode =
   | { kind: 'parent' }
 
 const BIRTH_GENDER_OPTIONS = [{ value: 'none', label: 'keine Angabe' }, ...GENDER_OPTIONS]
+
+const COUNTRY_SELECT_ITEMS = [
+  { value: 'none', label: 'keine Angabe' },
+  ...COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: `${c.flag} ${c.label}` })),
+]
 
 function PersonLink({ person }: { person: Person }) {
   const focusPerson = useTreeStore((s) => s.focusPerson)
@@ -108,6 +115,9 @@ export function DetailPanel() {
   const unlinkChild = useTreeStore((s) => s.unlinkChild)
   const focusLineageId = useTreeStore((s) => s.focusLineageId)
   const toggleFocusLineage = useTreeStore((s) => s.toggleFocusLineage)
+  const ancestorFocusId = useTreeStore((s) => s.ancestorFocusId)
+  const toggleAncestorFocus = useTreeStore((s) => s.toggleAncestorFocus)
+  const selectPerson = useTreeStore((s) => s.selectPerson)
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [picker, setPicker] = useState<PickerMode | null>(null)
@@ -116,8 +126,10 @@ export function DetailPanel() {
   const person = selectedPersonId ? persons[selectedPersonId] : undefined
 
   if (!person) {
+    // On mobile the panel is a drawer that only opens for a selected person,
+    // so the placeholder is shown on wider screens only.
     return (
-      <aside className="flex w-80 shrink-0 items-center justify-center border-l bg-card p-6">
+      <aside className="hidden w-80 shrink-0 items-center justify-center border-l bg-card p-6 md:flex">
         <p className="text-center text-sm text-muted-foreground">
           Wähle eine Person im Baum aus, um ihre Details zu bearbeiten.
         </p>
@@ -188,8 +200,26 @@ export function DetailPanel() {
   })()
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l bg-card">
-      <ScrollArea className="min-h-0 flex-1">
+    <>
+      {/* Mobile: dim the canvas behind the drawer; tap to close */}
+      <div
+        className="fixed inset-0 z-30 bg-black/40 md:hidden"
+        onClick={() => selectPerson(null)}
+      />
+      <aside className="fixed inset-y-0 right-0 z-40 flex w-full max-w-sm flex-col border-l bg-card shadow-xl md:static md:z-auto md:w-80 md:shrink-0 md:max-w-none md:shadow-none">
+        <div className="flex items-center justify-between border-b p-2 md:hidden">
+          <span className="px-2 text-sm font-medium">Person bearbeiten</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-8 p-0"
+            aria-label="Schließen"
+            onClick={() => selectPerson(null)}
+          >
+            <XIcon className="size-4" />
+          </Button>
+        </div>
+        <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 p-4">
           <div className="flex items-center gap-3">
             <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
@@ -230,6 +260,15 @@ export function DetailPanel() {
                   onClick={() => toggleFocusLineage(person.id)}
                 >
                   <FocusIcon /> {focusLineageId === person.id ? 'Fokus aufheben' : 'Fokus'}
+                </Button>
+                <Button
+                  variant={ancestorFocusId === person.id ? 'secondary' : 'outline'}
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  title="Nur die Vorfahren dieser Person zeigen"
+                  onClick={() => toggleAncestorFocus(person.id)}
+                >
+                  <NetworkIcon /> {ancestorFocusId === person.id ? 'Ahnen aus' : 'Ahnen'}
                 </Button>
               </div>
             </div>
@@ -285,33 +324,62 @@ export function DetailPanel() {
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="pf-birth">Geburtsdatum</Label>
+          <div className="grid gap-1.5">
+            <Label htmlFor="pf-birth">Geboren</Label>
+            <div className="grid grid-cols-2 gap-3">
               <Input
                 id="pf-birth"
                 placeholder="z. B. 12.03.1950"
                 value={person.birthDate ?? ''}
                 onChange={(e) => patch({ birthDate: e.target.value || undefined })}
               />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="pf-death">Sterbedatum</Label>
               <Input
-                id="pf-death"
-                value={person.deathDate ?? ''}
-                onChange={(e) => patch({ deathDate: e.target.value || undefined })}
+                id="pf-birthplace"
+                placeholder="Ort"
+                value={person.birthPlace ?? ''}
+                onChange={(e) => patch({ birthPlace: e.target.value || undefined })}
               />
             </div>
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="pf-place">Geburtsort</Label>
-            <Input
-              id="pf-place"
-              value={person.birthPlace ?? ''}
-              onChange={(e) => patch({ birthPlace: e.target.value || undefined })}
-            />
+            <Label htmlFor="pf-death">Gestorben</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                id="pf-death"
+                placeholder="z. B. 4.11.1975"
+                value={person.deathDate ?? ''}
+                onChange={(e) => patch({ deathDate: e.target.value || undefined })}
+              />
+              <Input
+                id="pf-deathplace"
+                placeholder="Ort"
+                value={person.deathPlace ?? ''}
+                onChange={(e) => patch({ deathPlace: e.target.value || undefined })}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label>Land</Label>
+            <Select
+              items={COUNTRY_SELECT_ITEMS}
+              value={person.country ?? 'none'}
+              onValueChange={(value) =>
+                patch({ country: value && value !== 'none' ? value : undefined })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRY_SELECT_ITEMS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Separator />
@@ -555,6 +623,7 @@ export function DetailPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </aside>
+      </aside>
+    </>
   )
 }
