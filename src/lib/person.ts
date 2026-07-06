@@ -9,6 +9,7 @@ export function lifespanLabel(person: Person): string {
   const parts: string[] = []
   if (person.birthDate) parts.push(`* ${person.birthDate}`)
   if (person.deathDate) parts.push(`† ${person.deathDate}`)
+  else if (isDeceased(person)) parts.push('†')
   return parts.join('  ')
 }
 
@@ -36,15 +37,21 @@ function parseDateParts(s?: string): { year: number; month?: number; day?: numbe
   return null
 }
 
+/** Known to have died — via the flag, a death date or a death place. */
+export function isDeceased(person: Person): boolean {
+  return person.deceased === true || Boolean(person.deathDate) || Boolean(person.deathPlace)
+}
+
 /**
  * Age in whole years — at death if a death date is set, otherwise today.
- * Returns null when the birth date can't be read or the result is implausible
- * (e.g. born long ago with no recorded death, so "age today" would be absurd).
+ * Returns null when the birth date can't be read, the person is known to have
+ * died but without a usable death date, or the result is implausible.
  */
 export function ageOf(person: Person, now: Date = new Date()): number | null {
   const b = parseDateParts(person.birthDate)
   if (!b) return null
   const d = parseDateParts(person.deathDate)
+  if (!d && isDeceased(person)) return null
   const end = d ?? { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() }
   let age = end.year - b.year
   if (

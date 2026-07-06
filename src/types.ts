@@ -15,6 +15,8 @@ export interface Person {
   birthPlace?: string
   deathDate?: string
   deathPlace?: string
+  /** Known to have died, even when no date/place is recorded. */
+  deceased?: boolean
   /** ISO 3166-1 alpha-2 country code of residence, e.g. "DE". */
   country?: string
   notes?: string

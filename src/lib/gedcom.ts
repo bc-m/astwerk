@@ -108,6 +108,9 @@ export function exportGedcom(tree: TreeFile): string {
       lines.push('1 DEAT')
       if (p.deathDate) lines.push(`2 DATE ${toGedcomDate(p.deathDate)}`)
       if (p.deathPlace) lines.push(`2 PLAC ${p.deathPlace}`)
+    } else if (p.deceased) {
+      // Died, but no date/place known — GEDCOM's "event occurred" marker.
+      lines.push('1 DEAT Y')
     }
     if (p.notes) pushNote(p.notes)
     for (const u of tree.unions) {
@@ -266,6 +269,8 @@ export function parseGedcom(text: string, fallbackName: string): TreeFile {
       birthPlace: birt ? findChild(birt, 'PLAC')?.value.trim() || undefined : undefined,
       deathDate: deathDateRaw ? fromGedcomDate(deathDateRaw) : undefined,
       deathPlace: deat ? findChild(deat, 'PLAC')?.value.trim() || undefined : undefined,
+      // A DEAT with no date/place still means the person died.
+      deceased: deat && !deathDateRaw && !findChild(deat, 'PLAC') ? true : undefined,
       country: findChild(r, '_CTRY')?.value.trim() || undefined,
       notes: noteParts.length > 0 ? noteParts.join('\n\n') : undefined,
     })

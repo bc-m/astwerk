@@ -37,7 +37,7 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { PersonPickerDialog } from '@/components/PersonPickerDialog'
 import { fileToResizedDataUrl } from '@/lib/image'
-import { displayName, initials } from '@/lib/person'
+import { displayName, initials, isDeceased } from '@/lib/person'
 import {
   childCandidates,
   parentCandidates,
@@ -358,6 +358,19 @@ export function DetailPanel() {
                 onChange={(e) => patch({ deathPlace: e.target.value || undefined })}
               />
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 accent-foreground"
+                checked={isDeceased(person)}
+                disabled={Boolean(person.deathDate || person.deathPlace)}
+                onChange={(e) => patch({ deceased: e.target.checked || undefined })}
+              />
+              Verstorben
+              {Boolean(person.deathDate || person.deathPlace) && (
+                <span className="text-xs text-muted-foreground">(aus Datum/Ort)</span>
+              )}
+            </label>
           </div>
 
           <div className="grid gap-1.5">
