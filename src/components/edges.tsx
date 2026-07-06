@@ -66,6 +66,11 @@ export function ElbowEdge({ id, sourceX, sourceY, targetX, targetY, style, data 
       [targetX, targetY],
     ])
     edgeStyle = { ...style, strokeDasharray: '6 4' }
+  } else if (Math.abs(sourceX - targetX) < 12) {
+    // Near-vertical: a tiny horizontal offset would otherwise be drawn as an
+    // orthogonal step or a slanted line. Draw it straight down from the union;
+    // the few-pixel offset just lands slightly off-centre on the wide box.
+    path = `M ${sourceX} ${sourceY} L ${sourceX} ${targetY}`
   } else {
     // For childless unions the line runs exactly through the anchor point,
     // so no offset or stub is created
