@@ -276,9 +276,167 @@ function computePositions(
   }
 
   compactBlocks(blocks, placed, unionList)
+  centerInmarriedParents(persons, placed, unionList, unionsByChild, unionsByPartner, genOf)
   removeDeadColumns(placed)
 
   return {placed}
+}
+
+/**
+ * Pool-adjacent-violators: the nearest non-decreasing sequence to `a`
+ * (least-squares). Used to resolve minimum-gap constraints between blocks.
+ */
+function isotonic(a: number[]): number[] {
+  const blocks: { sum: number; count: number; val: number }[] = []
+  for (const x of a) {
+    const b = { sum: x, count: 1, val: x }
+    while (blocks.length > 0 && blocks[blocks.length - 1].val > b.val) {
+      const prev = blocks.pop()!
+      b.sum += prev.sum
+      b.count += prev.count
+      b.val = b.sum / b.count
+    }
+    blocks.push(b)
+  }
+  const out: number[] = []
+  for (const b of blocks) for (let k = 0; k < b.count; k++) out.push(b.val)
+  return out
+}
+
+/**
+ * Centres competing in-married parent couples over their shared child couple.
+ *
+ * When both partners of a couple married in with recorded parents, only one
+ * parent couple can sit directly above the pair — the packer shoves the other
+ * off to the side, so the parent row leans one way (see the Helms/Harms case).
+ * This pass detects couples with a parent couple on *both* sides and spreads
+ * those parent couples symmetrically over the child pair, each centred over the
+ * child it belongs to. A lone parent couple (only one side has parents) is left
+ * as the packer placed it — centred over the couple already.
+ *
+ * Only parent couples whose members have no recorded parents of their own are
+ * moved (nothing has to be dragged along above them), and only when the shift
+ * leaves them clear of every other box on their generation — otherwise they
+ * stay put ("when there's space").
+ */
+function centerInmarriedParents(
+  persons: Record<string, Person>,
+  placed: Map<string, PlacedPos>,
+  unionList: Union[],
+  unionsByChild: Map<string, Union[]>,
+  unionsByPartner: Map<string, Union[]>,
+  genOf: Map<string, number>,
+): void {
+  const HALF = PERSON_W / 2
+  const hasParents = (id: string) => (unionsByChild.get(id)?.length ?? 0) > 0
+  const rootIds = [...placed.keys()].filter((id) => persons[id] && !hasParents(id))
+  const rootSet = new Set(rootIds)
+
+  // Union-find over root persons joined by a shared union (their marriage
+  // chain), so each couple / multi-marriage row moves as one rigid unit.
+  const uf = new Map(rootIds.map((id) => [id, id]))
+  const find = (x: string): string => {
+    while (uf.get(x) !== x) {
+      uf.set(x, uf.get(uf.get(x)!)!)
+      x = uf.get(x)!
+    }
+    return x
+  }
+  for (const u of unionList) {
+    const rp = u.partnerIds.filter((id) => rootSet.has(id))
+    for (let i = 1; i < rp.length; i++) uf.set(find(rp[0]), find(rp[i]))
+  }
+
+  // The root-group holding a person's (root) parents, or null.
+  const parentGroupOf = (id: string): string | null => {
+    for (const u of unionsByChild.get(id) ?? []) {
+      const rp = u.partnerIds.find((pid) => rootSet.has(pid))
+      if (rp) return find(rp)
+    }
+    return null
+  }
+  // A parent group only participates when it competes for the space above a
+  // child couple with another parent group on the couple's other side. Each
+  // group is centred over the specific child it connects to in that couple
+  // (not the average of all its children — a child elsewhere must not pull it).
+  const targetChildren = new Map<string, Set<string>>()
+  for (const u of unionList) {
+    const partners = u.partnerIds.filter((id) => persons[id])
+    if (partners.length < 2) continue
+    const groups = partners.map((id) => [id, parentGroupOf(id)] as const)
+    const roots = new Set(groups.map(([, g]) => g).filter((g): g is string => !!g))
+    if (roots.size < 2) continue
+    for (const [child, g] of groups) {
+      if (!g) continue
+      const set = targetChildren.get(g) ?? new Set<string>()
+      set.add(child)
+      targetChildren.set(g, set)
+    }
+  }
+  if (targetChildren.size === 0) return
+
+  const groupMembers = new Map<string, string[]>()
+  for (const id of rootIds) {
+    const r = find(id)
+    if (!targetChildren.has(r)) continue
+    const arr = groupMembers.get(r) ?? []
+    arr.push(id)
+    groupMembers.set(r, arr)
+  }
+
+  interface Group {
+    members: string[]
+    center: number
+    half: number
+    desired: number
+  }
+  const byGen = new Map<number, Group[]>()
+  for (const [root, members] of groupMembers) {
+    const xs = members.map((id) => placed.get(id)!.x)
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    const childXs = [...targetChildren.get(root)!].map((id) => placed.get(id)!.x)
+    const desired = (Math.min(...childXs) + Math.max(...childXs)) / 2
+    const gen = genOf.get(members[0]) ?? 0
+    const arr = byGen.get(gen) ?? []
+    arr.push({ members, center: (minX + maxX) / 2, half: (maxX - minX) / 2 + HALF, desired })
+    byGen.set(gen, arr)
+  }
+
+  for (const [gen, groups] of byGen) {
+    if (groups.every((g) => Math.abs(g.desired - g.center) < 1)) continue
+    groups.sort((a, b) => a.desired - b.desired)
+    const n = groups.length
+    // Convert the min-gap constraints into a plain monotonicity constraint by
+    // subtracting the cumulative required separation, then project.
+    const sep = new Array(n).fill(0)
+    for (let i = 1; i < n; i++)
+      sep[i] = sep[i - 1] + groups[i - 1].half + COMPACT_GAP + groups[i].half
+    const q = isotonic(groups.map((g, i) => g.desired - sep[i]))
+    const shifts = groups.map((g, i) => q[i] + sep[i] - g.center)
+
+    // "When there's space": only apply if no moved couple ends up overlapping
+    // another box on this generation.
+    const groupIds = new Set(groups.flatMap((g) => g.members))
+    const others = [...placed.entries()].filter(
+      ([id]) => persons[id] && genOf.get(id) === gen && !groupIds.has(id),
+    )
+    const clear = groups.every((g, i) => {
+      const c = g.center + shifts[i]
+      const lo = c - g.half
+      const hi = c + g.half
+      return others.every(([, p]) => hi + COMPACT_GAP <= p.x - HALF || p.x + HALF <= lo - COMPACT_GAP)
+    })
+    if (!clear) continue
+
+    groups.forEach((g, i) => {
+      if (Math.abs(shifts[i]) < 0.5) return
+      for (const id of g.members) {
+        const p = placed.get(id)!
+        placed.set(id, { ...p, x: p.x + shifts[i] })
+      }
+    })
+  }
 }
 
 /**
