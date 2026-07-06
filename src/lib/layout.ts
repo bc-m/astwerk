@@ -405,19 +405,9 @@ function compactBlocks(
     }
   }
 
-  // The largest group anchors the canvas and never moves. The rest follow top
-  // generation first, larger blocks winning ties, so ancestor couples claim
-  // their slot above their child in the sparse upper ranks before the denser
-  // lower blocks move in.
-  const minGen = groups.map((g) => Math.min(...g.gens.keys()))
+  // The largest group anchors the canvas and never moves.
   let anchor = 0
   for (let i = 1; i < groups.length; i++) if (groups[i].size > groups[anchor].size) anchor = i
-  const order = groups.map((_, i) => i)
-  order.sort((a, b) => {
-    if (a === anchor) return -1
-    if (b === anchor) return 1
-    return minGen[a] - minGen[b] || groups[b].size - groups[a].size
-  })
 
   const memberList = groups.map((g) => [...g.members])
   const avg = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
@@ -437,6 +427,14 @@ function compactBlocks(
     return {center: sum / memberList[gi].length, gens}
   }
 
+  // Barycentre of a group's cross-block connections (live positions).
+  const baryOf = (gi: number): number => {
+    const xs = targetIds[gi]
+      .map((id) => placed.get(id)?.x)
+      .filter((v): v is number => v !== undefined)
+    return xs.length ? avg(xs) : geomOf(gi).center
+  }
+
   // A few passes let a couple settle next to its child even when that child
   // only reached its final spot in an earlier pass (targets are re-read live).
   for (let pass = 0; pass < 3; pass++) {
@@ -448,7 +446,14 @@ function compactBlocks(
         occupancy.set(gen, list)
       }
     }
-    for (const [rank, gi] of order.entries()) {
+    // Place the anchor first, then the rest left-to-right in the order their
+    // relatives sit (by connection barycentre). Sorting by barycentre — rather
+    // than keeping the initial left-right order — lets two blocks swap sides so
+    // their connection lines no longer cross.
+    const passOrder = groups
+      .map((_, i) => i)
+      .sort((a, b) => (a === anchor ? -1 : b === anchor ? 1 : baryOf(a) - baryOf(b)))
+    for (const [rank, gi] of passOrder.entries()) {
       const {center, gens} = geomOf(gi)
       if (rank === 0) {
         occupy(gens, 0) // anchor stays put
