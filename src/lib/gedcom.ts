@@ -97,14 +97,17 @@ export function exportGedcom(tree: TreeFile): string {
     lines.push(`1 SEX ${SEX_EXPORT[p.gender]}`)
     // Custom tag, since GEDCOM has no concept of sex at birth
     if (p.birthGender) lines.push(`1 _BSEX ${SEX_EXPORT[p.birthGender]}`)
+    // Custom tag for the country of residence (its flag is shown in the app)
+    if (p.country) lines.push(`1 _CTRY ${p.country}`)
     if (p.birthDate || p.birthPlace) {
       lines.push('1 BIRT')
       if (p.birthDate) lines.push(`2 DATE ${toGedcomDate(p.birthDate)}`)
       if (p.birthPlace) lines.push(`2 PLAC ${p.birthPlace}`)
     }
-    if (p.deathDate) {
+    if (p.deathDate || p.deathPlace) {
       lines.push('1 DEAT')
-      lines.push(`2 DATE ${toGedcomDate(p.deathDate)}`)
+      if (p.deathDate) lines.push(`2 DATE ${toGedcomDate(p.deathDate)}`)
+      if (p.deathPlace) lines.push(`2 PLAC ${p.deathPlace}`)
     }
     if (p.notes) pushNote(p.notes)
     for (const u of tree.unions) {
@@ -262,6 +265,8 @@ export function parseGedcom(text: string, fallbackName: string): TreeFile {
       birthDate: birthDateRaw ? fromGedcomDate(birthDateRaw) : undefined,
       birthPlace: birt ? findChild(birt, 'PLAC')?.value.trim() || undefined : undefined,
       deathDate: deathDateRaw ? fromGedcomDate(deathDateRaw) : undefined,
+      deathPlace: deat ? findChild(deat, 'PLAC')?.value.trim() || undefined : undefined,
+      country: findChild(r, '_CTRY')?.value.trim() || undefined,
       notes: noteParts.length > 0 ? noteParts.join('\n\n') : undefined,
     })
   }

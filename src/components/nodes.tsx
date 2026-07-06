@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import type { Gender } from '@/types'
+import { COUNTRY_BY_CODE, type Gender } from '@/types'
 import type { PersonFlowNode, UnionFlowNode } from '@/lib/layout'
 import { birthNameLabel, displayName, lifespanLabel } from '@/lib/person'
 import { cn } from '@/lib/utils'
@@ -17,16 +17,25 @@ export function PersonNode({ data }: NodeProps<PersonFlowNode>) {
   const { person, selected, dimmed } = data
   const dates = lifespanLabel(person)
   const birthName = birthNameLabel(person)
+  const country = person.country ? COUNTRY_BY_CODE[person.country] : undefined
   return (
     <div
       data-dimmed={dimmed || undefined}
       className={cn(
-        'flex h-[88px] w-[200px] cursor-pointer items-center gap-2.5 rounded-lg border border-l-4 bg-card px-3 shadow-sm transition-opacity transition-shadow hover:shadow-md',
+        'relative flex h-[88px] w-[200px] cursor-pointer items-center gap-2.5 rounded-lg border border-l-4 bg-card px-3 shadow-sm transition-opacity transition-shadow hover:shadow-md',
         GENDER_ACCENT[person.gender],
         selected && 'ring-2 ring-ring',
         dimmed && 'opacity-20',
       )}
     >
+      {country && (
+        <span
+          className="pointer-events-none absolute top-1.5 right-2 text-sm leading-none"
+          title={country.label}
+        >
+          {country.flag}
+        </span>
+      )}
       <Handle type="target" position={Position.Top} style={hiddenHandle} isConnectable={false} />
       {person.photo && (
         <img
