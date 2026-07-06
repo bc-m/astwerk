@@ -1,7 +1,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { COUNTRY_BY_CODE, type Gender } from '@/types'
 import type { PersonFlowNode, UnionFlowNode } from '@/lib/layout'
-import { ageOf, birthNameLabel, displayName, lifespanLabel } from '@/lib/person'
+import { ageLabel, birthNameLabel, displayName, lifespanLabel } from '@/lib/person'
 import { cn } from '@/lib/utils'
 
 const GENDER_ACCENT: Record<Gender, string> = {
@@ -17,7 +17,7 @@ export function PersonNode({ data }: NodeProps<PersonFlowNode>) {
   const { person, selected, dimmed } = data
   const dates = lifespanLabel(person)
   const birthName = birthNameLabel(person)
-  const age = ageOf(person)
+  const age = ageLabel(person)
   const country = person.country ? COUNTRY_BY_CODE[person.country] : undefined
   return (
     <div
@@ -55,7 +55,7 @@ export function PersonNode({ data }: NodeProps<PersonFlowNode>) {
           <div className="mt-0.5 truncate text-xs text-muted-foreground">
             {dates}
             {dates && age !== null ? ' · ' : ''}
-            {age !== null ? `${age} J.` : ''}
+            {age ?? ''}
           </div>
         )}
       </div>

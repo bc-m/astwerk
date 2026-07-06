@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { NetworkIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ageOf, birthNameLabel, displayName, initials, isDeceased } from '@/lib/person'
+import { ageLabel, ageOf, birthNameLabel, displayName, initials, isDeceased } from '@/lib/person'
 import { useTreeStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import type { Person } from '@/types'
@@ -99,7 +99,7 @@ export function ListView() {
                   <td className="px-4 py-2 whitespace-nowrap">{p.deathDate}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1 tabular-nums">
-                      {ageOf(p) ?? ''}
+                      {(ageOf(p) ?? 1) < 1 ? ageLabel(p) : (ageOf(p) ?? '')}
                       {isDeceased(p) && (
                         <span className="text-muted-foreground" title="verstorben">
                           †

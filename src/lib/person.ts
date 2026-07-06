@@ -65,3 +65,22 @@ export function ageOf(person: Person, now: Date = new Date()): number | null {
   if (!d && age > 120) return null
   return age
 }
+
+/**
+ * Age as a display label. Children under one year are shown in months
+ * (e.g. "7 Mon."), everyone else in years (e.g. "5 J.").
+ */
+export function ageLabel(person: Person, now: Date = new Date()): string | null {
+  const age = ageOf(person, now)
+  if (age === null) return null
+  if (age >= 1) return `${age} J.`
+
+  const b = parseDateParts(person.birthDate)
+  if (!b) return null
+  const d = parseDateParts(person.deathDate)
+  const end = d ?? { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() }
+  let months = (end.year - b.year) * 12 + ((end.month ?? 1) - (b.month ?? 1))
+  if ((b.day ?? 1) > (end.day ?? 1)) months--
+  if (months < 0) months = 0
+  return `${months} Mon.`
+}
