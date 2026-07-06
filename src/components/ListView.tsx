@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { NetworkIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { birthNameLabel, displayName, initials } from '@/lib/person'
+import { ageOf, birthNameLabel, displayName, initials } from '@/lib/person'
 import { useTreeStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import type { Person } from '@/types'
@@ -57,6 +57,7 @@ export function ListView() {
               <th className="px-4 py-2 font-medium">Name</th>
               <th className="px-4 py-2 font-medium">Geboren</th>
               <th className="px-4 py-2 font-medium">Gestorben</th>
+              <th className="px-4 py-2 font-medium">Alter</th>
               <th className="px-4 py-2 font-medium">Geburtsort</th>
               <th className="w-12 px-2 py-2" />
             </tr>
@@ -96,6 +97,7 @@ export function ListView() {
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap">{p.birthDate}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{p.deathDate}</td>
+                  <td className="px-4 py-2 whitespace-nowrap tabular-nums">{ageOf(p) ?? ''}</td>
                   <td className="px-4 py-2">{p.birthPlace}</td>
                   <td className="px-2 py-2">
                     <Button
