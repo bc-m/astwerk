@@ -276,7 +276,7 @@ function computePositions(
   }
 
   compactBlocks(blocks, placed, unionList)
-  centerInmarriedParents(persons, placed, unionList, unionsByChild, unionsByPartner, genOf)
+  centerInmarriedParents(persons, placed, unionList, unionsByChild, genOf)
   removeDeadColumns(placed)
 
   return {placed}
@@ -289,7 +289,7 @@ function computePositions(
 function isotonic(a: number[]): number[] {
   const blocks: { sum: number; count: number; val: number }[] = []
   for (const x of a) {
-    const b = { sum: x, count: 1, val: x }
+    const b = {sum: x, count: 1, val: x}
     while (blocks.length > 0 && blocks[blocks.length - 1].val > b.val) {
       const prev = blocks.pop()!
       b.sum += prev.sum
@@ -324,7 +324,6 @@ function centerInmarriedParents(
   placed: Map<string, PlacedPos>,
   unionList: Union[],
   unionsByChild: Map<string, Union[]>,
-  unionsByPartner: Map<string, Union[]>,
   genOf: Map<string, number>,
 ): void {
   const HALF = PERSON_W / 2
@@ -390,6 +389,7 @@ function centerInmarriedParents(
     half: number
     desired: number
   }
+
   const byGen = new Map<number, Group[]>()
   for (const [root, members] of groupMembers) {
     const xs = members.map((id) => placed.get(id)!.x)
@@ -399,7 +399,7 @@ function centerInmarriedParents(
     const desired = (Math.min(...childXs) + Math.max(...childXs)) / 2
     const gen = genOf.get(members[0]) ?? 0
     const arr = byGen.get(gen) ?? []
-    arr.push({ members, center: (minX + maxX) / 2, half: (maxX - minX) / 2 + HALF, desired })
+    arr.push({members, center: (minX + maxX) / 2, half: (maxX - minX) / 2 + HALF, desired})
     byGen.set(gen, arr)
   }
 
@@ -433,7 +433,7 @@ function centerInmarriedParents(
       if (Math.abs(shifts[i]) < 0.5) return
       for (const id of g.members) {
         const p = placed.get(id)!
-        placed.set(id, { ...p, x: p.x + shifts[i] })
+        placed.set(id, {...p, x: p.x + shifts[i]})
       }
     })
   }
@@ -463,7 +463,7 @@ function removeDeadColumns(placed: Map<string, PlacedPos>): void {
   const cuts: { pos: number; amount: number }[] = []
   for (let i = 1; i < merged.length; i++) {
     const gap = merged[i][0] - merged[i - 1][1]
-    if (gap > DEAD_COLUMN_GAP + 0.5) cuts.push({ pos: merged[i][0], amount: gap - DEAD_COLUMN_GAP })
+    if (gap > DEAD_COLUMN_GAP + 0.5) cuts.push({pos: merged[i][0], amount: gap - DEAD_COLUMN_GAP})
   }
   if (cuts.length === 0) return
   for (const [id, p] of placed) {
