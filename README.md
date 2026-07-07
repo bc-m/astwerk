@@ -1,8 +1,26 @@
+<div align="center">
+
+<img src="public/logo.svg" alt="Astwerk logo" width="72" height="72" />
+
 # Astwerk
 
-A browser-based family tree editor. Runs entirely client-side – no servers, no accounts.
+**A browser-based family tree editor. Runs entirely client-side – no servers, no accounts, no tracking.**
 
-**Stack:** Vite · React · TypeScript · Tailwind CSS · shadcn/ui (Base UI) · React Flow (@xyflow/react) · Zustand
+[**▶ Open the live app
+**](https://bc-m.github.io/astwerk/) · [Report a bug](https://github.com/bc-m/astwerk/issues) · [Request a feature](https://github.com/bc-m/astwerk/issues)
+
+[![Deploy to GitHub Pages](https://github.com/bc-m/astwerk/actions/workflows/deploy.yml/badge.svg)](https://github.com/bc-m/astwerk/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+</div>
+
+<p align="center">
+  <img src="docs/screenshot.png" alt="Astwerk – editing a family tree in the browser" width="880" />
+</p>
+
+Astwerk (German for *branchwork*) lets you build, edit and export a family tree right
+in your browser. Your data never leaves the device – everything is stored locally and
+you can export it as JSON or GEDCOM at any time.
 
 ## Features
 
@@ -34,6 +52,8 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # production build into dist/
 ```
+
+**Stack:** Vite · React · TypeScript · Tailwind CSS · shadcn/ui (Base UI) · React Flow (@xyflow/react) · Zustand
 
 ## File format
 
