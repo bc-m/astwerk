@@ -32,7 +32,7 @@ export function PersonSearch() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative grow basis-44 sm:grow-0 sm:basis-auto">
       <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
       <Input
         ref={inputRef}
@@ -40,7 +40,7 @@ export function PersonSearch() {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Person suchen…"
         aria-label="Person suchen"
-        className="h-8 w-44 pl-7"
+        className="h-8 w-full pl-7 sm:w-44"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && results.length > 0) pick(results[0].id)
           if (e.key === 'Escape') setQuery('')

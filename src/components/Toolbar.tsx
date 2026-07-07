@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from 'zustand'
 import {
   DownloadIcon,
+  EllipsisVerticalIcon,
   FilePlus2Icon,
   FocusIcon,
   ListIcon,
@@ -86,8 +87,13 @@ export function Toolbar() {
     }
   }
 
+  const themeLabel = theme === 'light' ? 'Hell' : theme === 'dark' ? 'Dunkel' : 'System'
+  const ThemeIcon = theme === 'light' ? SunIcon : theme === 'dark' ? MoonIcon : MonitorIcon
+  const cycleTheme = () =>
+    setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system')
+
   return (
-    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b bg-card px-4 py-2.5">
+    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b bg-card px-3 py-2.5 sm:px-4">
       <a
         href="https://github.com/bc-m/astwerk"
         target="_blank"
@@ -103,7 +109,7 @@ export function Toolbar() {
         value={treeName}
         onChange={(e) => setTreeName(e.target.value)}
         aria-label="Name des Stammbaums"
-        className="h-8 w-36 sm:w-56"
+        className="h-8 grow basis-40 sm:w-56 sm:grow-0 sm:basis-auto"
       />
       <span className="hidden text-xs text-muted-foreground whitespace-nowrap sm:inline">
         {personCount} {personCount === 1 ? 'Person' : 'Personen'}
@@ -140,22 +146,22 @@ export function Toolbar() {
         </Button>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex items-center gap-2 sm:ml-auto">
         {importError && <span className="max-w-72 truncate text-xs text-destructive">{importError}</span>}
         <Button
           size="sm"
           variant="ghost"
-          aria-label={`Farbschema: ${theme === 'light' ? 'Hell' : theme === 'dark' ? 'Dunkel' : 'System'}`}
-          title={`Farbschema: ${theme === 'light' ? 'Hell' : theme === 'dark' ? 'Dunkel' : 'System'} (klicken zum Wechseln)`}
-          onClick={() =>
-            setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system')
-          }
+          className="hidden sm:inline-flex"
+          aria-label={`Farbschema: ${themeLabel}`}
+          title={`Farbschema: ${themeLabel} (klicken zum Wechseln)`}
+          onClick={cycleTheme}
         >
-          {theme === 'light' ? <SunIcon /> : theme === 'dark' ? <MoonIcon /> : <MonitorIcon />}
+          <ThemeIcon />
         </Button>
         <Button
           size="sm"
           variant="ghost"
+          className="hidden sm:inline-flex"
           aria-label="Rückgängig"
           disabled={!canUndo}
           onClick={undoTree}
@@ -165,24 +171,30 @@ export function Toolbar() {
         <Button
           size="sm"
           variant="ghost"
+          className="hidden sm:inline-flex"
           aria-label="Wiederholen"
           disabled={!canRedo}
           onClick={redoTree}
         >
           <Redo2Icon />
         </Button>
-        <Separator orientation="vertical" className="!h-5" />
+        <Separator orientation="vertical" className="!h-5 hidden sm:block" />
         <Button size="sm" onClick={() => addPerson()}>
           <UserPlusIcon /> Person
         </Button>
-        <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="hidden sm:inline-flex"
+          onClick={() => fileRef.current?.click()}
+        >
           <UploadIcon /> Import
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
             disabled={personCount === 0}
             render={
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" className="hidden sm:inline-flex">
                 <DownloadIcon /> Export
               </Button>
             }
@@ -206,10 +218,68 @@ export function Toolbar() {
         <Button
           size="sm"
           variant="ghost"
+          className="hidden sm:inline-flex"
           onClick={() => (personCount === 0 ? reset() : setResetOpen(true))}
         >
           <FilePlus2Icon /> Neu
         </Button>
+
+        {/* Mobile: alle sekundären Aktionen in einem Überlaufmenü */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                size="sm"
+                variant="ghost"
+                className="sm:hidden"
+                aria-label="Weitere Aktionen"
+              >
+                <EllipsisVerticalIcon />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuItem disabled={!canUndo} onClick={undoTree}>
+              <Undo2Icon /> Rückgängig
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={!canRedo} onClick={redoTree}>
+              <Redo2Icon /> Wiederholen
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={cycleTheme}>
+              <ThemeIcon /> Farbschema: {themeLabel}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => fileRef.current?.click()}>
+              <UploadIcon /> Import
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={personCount === 0} onClick={() => downloadTreeFile(toFile())}>
+              <DownloadIcon /> Export JSON
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={personCount === 0}
+              onClick={() => downloadGedcomFile(toFile())}
+            >
+              <DownloadIcon /> Export GEDCOM
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={personCount === 0}
+              onClick={() => requestImageExport('png')}
+            >
+              <DownloadIcon /> Export Bild (.png)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={personCount === 0}
+              onClick={() => requestImageExport('pdf')}
+            >
+              <DownloadIcon /> Export PDF
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => (personCount === 0 ? reset() : setResetOpen(true))}>
+              <FilePlus2Icon /> Neu
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <input

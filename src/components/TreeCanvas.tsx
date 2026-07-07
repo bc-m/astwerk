@@ -382,7 +382,7 @@ function Canvas() {
         <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} />
         <Controls showInteractive={false} />
         {treeBounds && (
-          <Panel position="bottom-right">
+          <Panel position="bottom-right" className="hidden sm:block">
             <TreeMiniMap
               nodes={nodes}
               bounds={treeBounds}
