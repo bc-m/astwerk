@@ -1,8 +1,9 @@
+import { t } from '@/lib/i18n'
 import type { Person } from '@/types'
 
 export function displayName(person: Person): string {
   const name = `${person.firstName} ${person.lastName}`.trim()
-  return name || 'Unbenannt'
+  return name || t('person.unnamed')
 }
 
 export function lifespanLabel(person: Person): string {
@@ -17,7 +18,7 @@ export function lifespanLabel(person: Person): string {
 export function birthNameLabel(person: Person): string | null {
   const parts = [person.birthFirstName, person.birthName].filter(Boolean)
   if (parts.length === 0) return null
-  return `geb. ${parts.join(' ')}`
+  return `${t('label.bornPrefix')} ${parts.join(' ')}`
 }
 
 export function initials(person: Person): string {
@@ -73,7 +74,7 @@ export function ageOf(person: Person, now: Date = new Date()): number | null {
 export function ageLabel(person: Person, now: Date = new Date()): string | null {
   const age = ageOf(person, now)
   if (age === null) return null
-  if (age >= 1) return `${age} J.`
+  if (age >= 1) return t('label.years', { n: age })
 
   const b = parseDateParts(person.birthDate)
   if (!b) return null
@@ -82,5 +83,5 @@ export function ageLabel(person: Person, now: Date = new Date()): string | null 
   let months = (end.year - b.year) * 12 + ((end.month ?? 1) - (b.month ?? 1))
   if ((b.day ?? 1) > (end.day ?? 1)) months--
   if (months < 0) months = 0
-  return `${months} Mon.`
+  return t('label.months', { n: months })
 }

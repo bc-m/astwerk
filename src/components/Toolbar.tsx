@@ -5,6 +5,7 @@ import {
   EllipsisVerticalIcon,
   FilePlus2Icon,
   FocusIcon,
+  LanguagesIcon,
   ListIcon,
   MonitorIcon,
   MoonIcon,
@@ -39,11 +40,15 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { PersonSearch } from '@/components/PersonSearch'
 import { parseGedcom } from '@/lib/gedcom'
+import { useI18n, useT } from '@/lib/i18n'
 import { downloadGedcomFile, downloadTreeFile, parseTreeFile } from '@/lib/io'
 import { displayName } from '@/lib/person'
 import { redoTree, undoTree, useTreeStore } from '@/lib/store'
 
 export function Toolbar() {
+  const t = useT()
+  const lang = useI18n((s) => s.lang)
+  const setLang = useI18n((s) => s.setLang)
   const treeName = useTreeStore((s) => s.treeName)
   const setTreeName = useTreeStore((s) => s.setTreeName)
   const personCount = useTreeStore((s) => Object.keys(s.persons).length)
@@ -83,14 +88,20 @@ export function Toolbar() {
       loadFile(isGedcom ? parseGedcom(text, baseName) : parseTreeFile(text))
       setImportError(null)
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Import fehlgeschlagen.')
+      setImportError(err instanceof Error ? err.message : t('import.failed'))
     }
   }
 
-  const themeLabel = theme === 'light' ? 'Hell' : theme === 'dark' ? 'Dunkel' : 'System'
+  const themeLabel =
+    theme === 'light'
+      ? t('toolbar.theme.light')
+      : theme === 'dark'
+        ? t('toolbar.theme.dark')
+        : t('toolbar.theme.system')
   const ThemeIcon = theme === 'light' ? SunIcon : theme === 'dark' ? MoonIcon : MonitorIcon
   const cycleTheme = () =>
     setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system')
+  const toggleLang = () => setLang(lang === 'de' ? 'en' : 'de')
 
   return (
     <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b bg-card px-3 py-2.5 sm:px-4">
@@ -98,7 +109,7 @@ export function Toolbar() {
         href="https://github.com/bc-m/astwerk"
         target="_blank"
         rel="noreferrer noopener"
-        title="Astwerk auf GitHub"
+        title={t('toolbar.github')}
         className="flex items-center gap-2 hover:opacity-80"
       >
         <TreeDeciduousIcon className="size-5 text-emerald-600" />
@@ -108,11 +119,11 @@ export function Toolbar() {
       <Input
         value={treeName}
         onChange={(e) => setTreeName(e.target.value)}
-        aria-label="Name des Stammbaums"
+        aria-label={t('toolbar.treeName')}
         className="h-8 grow basis-40 sm:w-56 sm:grow-0 sm:basis-auto"
       />
       <span className="hidden text-xs text-muted-foreground whitespace-nowrap sm:inline">
-        {personCount} {personCount === 1 ? 'Person' : 'Personen'}
+        {t(personCount === 1 ? 'person.count.one' : 'person.count.other', { count: personCount })}
       </span>
       <div className="flex items-center rounded-lg border p-0.5">
         <Button
@@ -121,7 +132,7 @@ export function Toolbar() {
           className="h-6 px-2 text-xs"
           onClick={() => setViewMode('tree')}
         >
-          <NetworkIcon /> Baum
+          <NetworkIcon /> {t('toolbar.view.tree')}
         </Button>
         <Button
           size="sm"
@@ -129,7 +140,7 @@ export function Toolbar() {
           className="h-6 px-2 text-xs"
           onClick={() => setViewMode('list')}
         >
-          <ListIcon /> Liste
+          <ListIcon /> {t('toolbar.view.list')}
         </Button>
       </div>
       <PersonSearch />
@@ -138,10 +149,11 @@ export function Toolbar() {
           size="sm"
           variant="secondary"
           className="h-6 max-w-56 px-2 text-xs"
-          title="Fokus aufheben"
+          title={t('toolbar.focus.clear')}
           onClick={() => toggleFocusLineage(focusLineageId)}
         >
-          <FocusIcon /> <span className="truncate">Fokus: {displayName(focusedPerson)}</span>
+          <FocusIcon />{' '}
+          <span className="truncate">{t('toolbar.focus.label', { name: displayName(focusedPerson) })}</span>
           <XIcon />
         </Button>
       )}
@@ -152,8 +164,8 @@ export function Toolbar() {
           size="sm"
           variant="ghost"
           className="hidden sm:inline-flex"
-          aria-label={`Farbschema: ${themeLabel}`}
-          title={`Farbschema: ${themeLabel} (klicken zum Wechseln)`}
+          aria-label={t('toolbar.theme.aria', { label: themeLabel })}
+          title={t('toolbar.theme.title', { label: themeLabel })}
           onClick={cycleTheme}
         >
           <ThemeIcon />
@@ -162,7 +174,17 @@ export function Toolbar() {
           size="sm"
           variant="ghost"
           className="hidden sm:inline-flex"
-          aria-label="Rückgängig"
+          aria-label={t('toolbar.lang')}
+          title={t('toolbar.lang')}
+          onClick={toggleLang}
+        >
+          <LanguagesIcon /> <span className="text-xs font-medium uppercase">{lang}</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="hidden sm:inline-flex"
+          aria-label={t('toolbar.undo')}
           disabled={!canUndo}
           onClick={undoTree}
         >
@@ -172,7 +194,7 @@ export function Toolbar() {
           size="sm"
           variant="ghost"
           className="hidden sm:inline-flex"
-          aria-label="Wiederholen"
+          aria-label={t('toolbar.redo')}
           disabled={!canRedo}
           onClick={redoTree}
         >
@@ -180,7 +202,7 @@ export function Toolbar() {
         </Button>
         <Separator orientation="vertical" className="!h-5 hidden sm:block" />
         <Button size="sm" onClick={() => addPerson()}>
-          <UserPlusIcon /> Person
+          <UserPlusIcon /> {t('toolbar.person')}
         </Button>
         <Button
           size="sm"
@@ -188,30 +210,30 @@ export function Toolbar() {
           className="hidden sm:inline-flex"
           onClick={() => fileRef.current?.click()}
         >
-          <UploadIcon /> Import
+          <UploadIcon /> {t('toolbar.import')}
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
             disabled={personCount === 0}
             render={
               <Button size="sm" variant="outline" className="hidden sm:inline-flex">
-                <DownloadIcon /> Export
+                <DownloadIcon /> {t('toolbar.export')}
               </Button>
             }
           />
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => downloadTreeFile(toFile())}>
-              Als JSON (.json)
+              {t('toolbar.export.json')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => downloadGedcomFile(toFile())}>
-              Als GEDCOM (.ged)
+              {t('toolbar.export.gedcom')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => requestImageExport('png')}>
-              Als Bild (.png)
+              {t('toolbar.export.png')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => requestImageExport('pdf')}>
-              Als PDF (.pdf)
+              {t('toolbar.export.pdf')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -221,10 +243,10 @@ export function Toolbar() {
           className="hidden sm:inline-flex"
           onClick={() => (personCount === 0 ? reset() : setResetOpen(true))}
         >
-          <FilePlus2Icon /> Neu
+          <FilePlus2Icon /> {t('toolbar.new')}
         </Button>
 
-        {/* Mobile: alle sekundären Aktionen in einem Überlaufmenü */}
+        {/* Mobile: all secondary actions in one overflow menu */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -232,7 +254,7 @@ export function Toolbar() {
                 size="sm"
                 variant="ghost"
                 className="sm:hidden"
-                aria-label="Weitere Aktionen"
+                aria-label={t('toolbar.moreActions')}
               >
                 <EllipsisVerticalIcon />
               </Button>
@@ -240,43 +262,46 @@ export function Toolbar() {
           />
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuItem disabled={!canUndo} onClick={undoTree}>
-              <Undo2Icon /> Rückgängig
+              <Undo2Icon /> {t('toolbar.undo')}
             </DropdownMenuItem>
             <DropdownMenuItem disabled={!canRedo} onClick={redoTree}>
-              <Redo2Icon /> Wiederholen
+              <Redo2Icon /> {t('toolbar.redo')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={cycleTheme}>
-              <ThemeIcon /> Farbschema: {themeLabel}
+              <ThemeIcon /> {t('toolbar.theme.aria', { label: themeLabel })}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={toggleLang}>
+              <LanguagesIcon /> {t('toolbar.lang')}: {lang.toUpperCase()}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => fileRef.current?.click()}>
-              <UploadIcon /> Import
+              <UploadIcon /> {t('toolbar.import')}
             </DropdownMenuItem>
             <DropdownMenuItem disabled={personCount === 0} onClick={() => downloadTreeFile(toFile())}>
-              <DownloadIcon /> Export JSON
+              <DownloadIcon /> {t('toolbar.export.jsonShort')}
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={personCount === 0}
               onClick={() => downloadGedcomFile(toFile())}
             >
-              <DownloadIcon /> Export GEDCOM
+              <DownloadIcon /> {t('toolbar.export.gedcomShort')}
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={personCount === 0}
               onClick={() => requestImageExport('png')}
             >
-              <DownloadIcon /> Export Bild (.png)
+              <DownloadIcon /> {t('toolbar.export.pngShort')}
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={personCount === 0}
               onClick={() => requestImageExport('pdf')}
             >
-              <DownloadIcon /> Export PDF
+              <DownloadIcon /> {t('toolbar.export.pdfShort')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => (personCount === 0 ? reset() : setResetOpen(true))}>
-              <FilePlus2Icon /> Neu
+              <FilePlus2Icon /> {t('toolbar.new')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -297,14 +322,13 @@ export function Toolbar() {
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Neuen Stammbaum beginnen?</AlertDialogTitle>
+            <AlertDialogTitle>{t('reset.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Der aktuelle Stammbaum mit {personCount} Personen wird verworfen. Nicht exportierte
-              Daten gehen verloren.
+              {t('reset.body', { count: personCount })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel>{t('action.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -312,7 +336,7 @@ export function Toolbar() {
                 setResetOpen(false)
               }}
             >
-              Verwerfen und neu beginnen
+              {t('reset.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -18,6 +18,7 @@ import { NetworkIcon, UsersIcon, SparklesIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { downloadDataUrl, slugify, timestampSuffix } from '@/lib/io'
+import { useT } from '@/lib/i18n'
 import { useResolvedTheme } from '@/lib/theme'
 import { EdgeMenuContext, ElbowEdge } from '@/components/edges'
 import { PersonNode, UnionNode } from '@/components/nodes'
@@ -121,6 +122,7 @@ const nodeTypes = { person: PersonNode, union: UnionNode }
 const edgeTypes = { elbow: ElbowEdge }
 
 function EmptyState() {
+  const t = useT()
   const addPerson = useTreeStore((s) => s.addPerson)
   const loadFile = useTreeStore((s) => s.loadFile)
   return (
@@ -128,14 +130,14 @@ function EmptyState() {
       <Card className="w-80">
         <CardContent className="flex flex-col items-center gap-4 text-center">
           <p className="text-sm text-muted-foreground">
-            Noch keine Personen vorhanden. Lege die erste Person an oder schau dir das Beispiel an.
+            {t('empty.text')}
           </p>
           <div className="flex w-full flex-col gap-2">
             <Button onClick={() => addPerson()}>
-              <UsersIcon /> Erste Person anlegen
+              <UsersIcon /> {t('empty.addFirst')}
             </Button>
             <Button variant="outline" onClick={() => loadFile(createSampleTree())}>
-              <SparklesIcon /> Beispiel laden
+              <SparklesIcon /> {t('empty.loadSample')}
             </Button>
           </div>
         </CardContent>
@@ -145,6 +147,7 @@ function EmptyState() {
 }
 
 function Canvas() {
+  const t = useT()
   const persons = useTreeStore((s) => s.persons)
   const unions = useTreeStore((s) => s.unions)
   const selectedPersonId = useTreeStore((s) => s.selectedPersonId)
@@ -398,7 +401,7 @@ function Canvas() {
         {ancestorFocusId && (
           <Panel position="top-right" className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => toggleAncestorFocus(ancestorFocusId)}>
-              <NetworkIcon /> Ahnen aus
+              <NetworkIcon /> {t('detail.ancestors.off')}
             </Button>
           </Panel>
         )}
@@ -413,16 +416,16 @@ function Canvas() {
               top: Math.min(edgeMenu.y, window.innerHeight - 240),
             }}
           >
-            <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Gehe zu</div>
+            <div className="px-2 py-1 text-xs font-medium text-muted-foreground">{t('edgeMenu.goTo')}</div>
             {menuUnion.partnerIds
               .filter((id) => persons[id])
               .map((id) =>
                 menuItem(
                   id,
                   persons[id].gender === 'm'
-                    ? 'Vater'
+                    ? t('role.father')
                     : persons[id].gender === 'f'
-                      ? 'Mutter'
+                      ? t('role.mother')
                       : null,
                 ),
               )}
@@ -430,7 +433,7 @@ function Canvas() {
               menuUnion.childIds.some((id) => persons[id]) && (
                 <div className="my-1 h-px bg-border" />
               )}
-            {menuUnion.childIds.filter((id) => persons[id]).map((id) => menuItem(id, 'Kind'))}
+            {menuUnion.childIds.filter((id) => persons[id]).map((id) => menuItem(id, t('role.child')))}
           </div>
         </>
       )}

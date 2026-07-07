@@ -3,6 +3,7 @@ import { DetailPanel } from '@/components/DetailPanel'
 import { ListView } from '@/components/ListView'
 import { Toolbar } from '@/components/Toolbar'
 import { TreeCanvas } from '@/components/TreeCanvas'
+import { useLang } from '@/lib/i18n'
 import { redoTree, undoTree, useTreeStore } from '@/lib/store'
 import { useResolvedTheme } from '@/lib/theme'
 
@@ -16,11 +17,16 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export default function App() {
   const viewMode = useTreeStore((s) => s.viewMode)
   const resolvedTheme = useResolvedTheme()
+  const lang = useLang()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', resolvedTheme === 'dark')
     document.documentElement.style.colorScheme = resolvedTheme
   }, [resolvedTheme])
+
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

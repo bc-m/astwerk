@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { COUNTRY_BY_CODE, type Gender } from '@/types'
+import { COUNTRY_FLAG, type Gender } from '@/types'
+import { countryLabel, useLang } from '@/lib/i18n'
 import type { PersonFlowNode, UnionFlowNode } from '@/lib/layout'
 import { ageLabel, birthNameLabel, displayName, lifespanLabel } from '@/lib/person'
 import { cn } from '@/lib/utils'
@@ -14,11 +15,12 @@ const GENDER_ACCENT: Record<Gender, string> = {
 const hiddenHandle = { opacity: 0, width: 4, height: 4, minWidth: 0, minHeight: 0 }
 
 export function PersonNode({ data }: NodeProps<PersonFlowNode>) {
+  const lang = useLang()
   const { person, selected, dimmed } = data
   const dates = lifespanLabel(person)
   const birthName = birthNameLabel(person)
   const age = ageLabel(person)
-  const country = person.country ? COUNTRY_BY_CODE[person.country] : undefined
+  const countryFlag = person.country ? COUNTRY_FLAG[person.country] : undefined
   return (
     <div
       data-dimmed={dimmed || undefined}
@@ -29,12 +31,12 @@ export function PersonNode({ data }: NodeProps<PersonFlowNode>) {
         dimmed && 'opacity-20',
       )}
     >
-      {country && (
+      {countryFlag && (
         <span
           className="pointer-events-none absolute top-1.5 right-2 text-sm leading-none"
-          title={country.label}
+          title={countryLabel(person.country as string, lang)}
         >
-          {country.flag}
+          {countryFlag}
         </span>
       )}
       <Handle type="target" position={Position.Top} style={hiddenHandle} isConnectable={false} />

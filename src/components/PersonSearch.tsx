@@ -1,10 +1,12 @@
 import { useMemo, useRef, useState } from 'react'
 import { SearchIcon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { useT } from '@/lib/i18n'
 import { displayName, lifespanLabel } from '@/lib/person'
 import { useTreeStore } from '@/lib/store'
 
 export function PersonSearch() {
+  const t = useT()
   const persons = useTreeStore((s) => s.persons)
   const focusPerson = useTreeStore((s) => s.focusPerson)
   const setViewMode = useTreeStore((s) => s.setViewMode)
@@ -38,8 +40,8 @@ export function PersonSearch() {
         ref={inputRef}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Person suchen…"
-        aria-label="Person suchen"
+        placeholder={t('search.placeholder')}
+        aria-label={t('search.aria')}
         className="h-8 w-full pl-7 sm:w-44"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && results.length > 0) pick(results[0].id)
@@ -49,7 +51,7 @@ export function PersonSearch() {
       {query.trim() !== '' && (
         <div className="absolute top-full left-0 z-50 mt-1 w-72 rounded-lg border bg-popover p-1 shadow-md">
           {results.length === 0 ? (
-            <p className="px-2 py-1.5 text-sm text-muted-foreground">Keine Treffer.</p>
+            <p className="px-2 py-1.5 text-sm text-muted-foreground">{t('search.noMatches')}</p>
           ) : (
             results.map((p) => (
               <button

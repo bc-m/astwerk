@@ -36,6 +36,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { PersonPickerDialog } from '@/components/PersonPickerDialog'
+import { countryLabel, useLang, useT } from '@/lib/i18n'
 import { fileToResizedDataUrl } from '@/lib/image'
 import { displayName, initials, isDeceased } from '@/lib/person'
 import {
@@ -45,19 +46,12 @@ import {
   partnerCandidates,
 } from '@/lib/relations'
 import { useTreeStore } from '@/lib/store'
-import { COUNTRY_OPTIONS, GENDER_OPTIONS, type Gender, type Person } from '@/types'
+import { COUNTRY_OPTIONS, GENDER_VALUES, type Gender, type Person } from '@/types'
 
 type PickerMode =
   | { kind: 'partner' }
   | { kind: 'child'; unionId?: string }
   | { kind: 'parent' }
-
-const BIRTH_GENDER_OPTIONS = [{ value: 'none', label: 'keine Angabe' }, ...GENDER_OPTIONS]
-
-const COUNTRY_SELECT_ITEMS = [
-  { value: 'none', label: 'keine Angabe' },
-  ...COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: `${c.flag} ${c.label}` })),
-]
 
 function PersonLink({ person }: { person: Person }) {
   const focusPerson = useTreeStore((s) => s.focusPerson)
@@ -99,6 +93,17 @@ function RelationRow({
 }
 
 export function DetailPanel() {
+  const t = useT()
+  const lang = useLang()
+  const genderOptions = GENDER_VALUES.map((v) => ({ value: v, label: t(`gender.${v}`) }))
+  const birthGenderOptions = [{ value: 'none', label: t('gender.none') }, ...genderOptions]
+  const countrySelectItems = [
+    { value: 'none', label: t('gender.none') },
+    ...COUNTRY_OPTIONS.map((c) => ({
+      value: c.code,
+      label: `${c.flag} ${countryLabel(c.code, lang)}`,
+    })),
+  ]
   const persons = useTreeStore((s) => s.persons)
   const unions = useTreeStore((s) => s.unions)
   const selectedPersonId = useTreeStore((s) => s.selectedPersonId)
@@ -131,7 +136,7 @@ export function DetailPanel() {
     return (
       <aside className="hidden w-80 shrink-0 items-center justify-center border-l bg-card p-6 md:flex">
         <p className="text-center text-sm text-muted-foreground">
-          Wähle eine Person im Baum aus, um ihre Details zu bearbeiten.
+          {t('detail.empty')}
         </p>
       </aside>
     )
@@ -177,22 +182,22 @@ export function DetailPanel() {
     switch (picker.kind) {
       case 'partner':
         return {
-          title: 'Person als Partner verknüpfen',
+          title: t('picker.partner.title'),
           candidates: partnerCandidates(persons, unions, person.id),
           onPick: (id: string) => linkPartner(person.id, id),
         }
       case 'child': {
         const union = picker.unionId ? unions[picker.unionId] : undefined
         return {
-          title: 'Person als Kind verknüpfen',
-          description: 'Nur Personen ohne bestehende Eltern sind wählbar.',
+          title: t('picker.child.title'),
+          description: t('picker.child.description'),
           candidates: childCandidates(persons, unions, union?.partnerIds ?? [person.id]),
           onPick: (id: string) => linkChild(person.id, id, picker.unionId),
         }
       }
       case 'parent':
         return {
-          title: 'Person als Elternteil verknüpfen',
+          title: t('picker.parent.title'),
           candidates: parentCandidates(persons, unions, person.id),
           onPick: (id: string) => linkParent(person.id, id),
         }
@@ -208,12 +213,12 @@ export function DetailPanel() {
       />
       <aside className="fixed inset-y-0 right-0 z-40 flex w-full max-w-sm flex-col border-l bg-card shadow-xl md:static md:z-auto md:w-80 md:shrink-0 md:max-w-none md:shadow-none">
         <div className="flex items-center justify-between border-b p-2 md:hidden">
-          <span className="px-2 text-sm font-medium">Person bearbeiten</span>
+          <span className="px-2 text-sm font-medium">{t('detail.editPerson')}</span>
           <Button
             variant="ghost"
             size="sm"
             className="size-8 p-0"
-            aria-label="Schließen"
+            aria-label={t('action.close')}
             onClick={() => selectPerson(null)}
           >
             <XIcon className="size-4" />
@@ -240,7 +245,7 @@ export function DetailPanel() {
                   className="h-6 px-2 text-xs"
                   onClick={() => photoRef.current?.click()}
                 >
-                  <CameraIcon /> Foto
+                  <CameraIcon /> {t('detail.photo')}
                 </Button>
                 {person.photo && (
                   <Button
@@ -249,26 +254,26 @@ export function DetailPanel() {
                     className="h-6 px-2 text-xs text-muted-foreground"
                     onClick={() => patch({ photo: undefined })}
                   >
-                    Entfernen
+                    {t('action.remove')}
                   </Button>
                 )}
                 <Button
                   variant={focusLineageId === person.id ? 'secondary' : 'outline'}
                   size="sm"
                   className="h-6 px-2 text-xs"
-                  title="Nur die Laufbahn dieser Person hervorheben"
+                  title={t('detail.lineage.title')}
                   onClick={() => toggleFocusLineage(person.id)}
                 >
-                  <FocusIcon /> {focusLineageId === person.id ? 'Fokus aufheben' : 'Fokus'}
+                  <FocusIcon /> {focusLineageId === person.id ? t('detail.focus.clear') : t('detail.focus')}
                 </Button>
                 <Button
                   variant={ancestorFocusId === person.id ? 'secondary' : 'outline'}
                   size="sm"
                   className="h-6 px-2 text-xs"
-                  title="Nur die Vorfahren dieser Person zeigen"
+                  title={t('detail.ancestors.title')}
                   onClick={() => toggleAncestorFocus(person.id)}
                 >
-                  <NetworkIcon /> {ancestorFocusId === person.id ? 'Ahnen aus' : 'Ahnen'}
+                  <NetworkIcon /> {ancestorFocusId === person.id ? t('detail.ancestors.off') : t('detail.ancestors')}
                 </Button>
               </div>
             </div>
@@ -287,7 +292,7 @@ export function DetailPanel() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
-              <Label htmlFor="pf-first">Vorname</Label>
+              <Label htmlFor="pf-first">{t('field.firstName')}</Label>
               <Input
                 id="pf-first"
                 value={person.firstName}
@@ -295,7 +300,7 @@ export function DetailPanel() {
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="pf-last">Nachname</Label>
+              <Label htmlFor="pf-last">{t('field.lastName')}</Label>
               <Input
                 id="pf-last"
                 value={person.lastName}
@@ -305,9 +310,9 @@ export function DetailPanel() {
           </div>
 
           <div className="grid gap-1.5">
-            <Label>Geschlecht</Label>
+            <Label>{t('field.gender')}</Label>
             <Select
-              items={GENDER_OPTIONS}
+              items={genderOptions}
               value={person.gender}
               onValueChange={(value) => patch({ gender: value as Gender })}
             >
@@ -315,7 +320,7 @@ export function DetailPanel() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {GENDER_OPTIONS.map((o) => (
+                {genderOptions.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
                   </SelectItem>
@@ -325,17 +330,17 @@ export function DetailPanel() {
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="pf-birth">Geboren</Label>
+            <Label htmlFor="pf-birth">{t('field.born')}</Label>
             <div className="grid grid-cols-2 gap-3">
               <Input
                 id="pf-birth"
-                placeholder="z. B. 12.03.1950"
+                placeholder={t('field.birthDate.placeholder')}
                 value={person.birthDate ?? ''}
                 onChange={(e) => patch({ birthDate: e.target.value || undefined })}
               />
               <Input
                 id="pf-birthplace"
-                placeholder="Ort"
+                placeholder={t('field.place')}
                 value={person.birthPlace ?? ''}
                 onChange={(e) => patch({ birthPlace: e.target.value || undefined })}
               />
@@ -343,17 +348,17 @@ export function DetailPanel() {
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="pf-death">Gestorben</Label>
+            <Label htmlFor="pf-death">{t('field.died')}</Label>
             <div className="grid grid-cols-2 gap-3">
               <Input
                 id="pf-death"
-                placeholder="z. B. 4.11.1975"
+                placeholder={t('field.deathDate.placeholder')}
                 value={person.deathDate ?? ''}
                 onChange={(e) => patch({ deathDate: e.target.value || undefined })}
               />
               <Input
                 id="pf-deathplace"
-                placeholder="Ort"
+                placeholder={t('field.place')}
                 value={person.deathPlace ?? ''}
                 onChange={(e) => patch({ deathPlace: e.target.value || undefined })}
               />
@@ -366,17 +371,17 @@ export function DetailPanel() {
                 disabled={Boolean(person.deathDate || person.deathPlace)}
                 onChange={(e) => patch({ deceased: e.target.checked || undefined })}
               />
-              Verstorben
+              {t('field.deceased')}
               {Boolean(person.deathDate || person.deathPlace) && (
-                <span className="text-xs text-muted-foreground">(aus Datum/Ort)</span>
+                <span className="text-xs text-muted-foreground">{t('field.deceased.derived')}</span>
               )}
             </label>
           </div>
 
           <div className="grid gap-1.5">
-            <Label>Land</Label>
+            <Label>{t('field.country')}</Label>
             <Select
-              items={COUNTRY_SELECT_ITEMS}
+              items={countrySelectItems}
               value={person.country ?? 'none'}
               onValueChange={(value) =>
                 patch({ country: value && value !== 'none' ? value : undefined })
@@ -386,7 +391,7 @@ export function DetailPanel() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {COUNTRY_SELECT_ITEMS.map((o) => (
+                {countrySelectItems.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
                   </SelectItem>
@@ -399,11 +404,11 @@ export function DetailPanel() {
 
           <section className="grid gap-3">
             <h3 className="text-xs font-medium text-muted-foreground">
-              Bei Geburt (falls abweichend)
+              {t('birth.section')}
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
-                <Label htmlFor="pf-birthfirst">Vorname</Label>
+                <Label htmlFor="pf-birthfirst">{t('field.firstName')}</Label>
                 <Input
                   id="pf-birthfirst"
                   value={person.birthFirstName ?? ''}
@@ -411,7 +416,7 @@ export function DetailPanel() {
                 />
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="pf-birthname">Nachname</Label>
+                <Label htmlFor="pf-birthname">{t('field.lastName')}</Label>
                 <Input
                   id="pf-birthname"
                   value={person.birthName ?? ''}
@@ -420,9 +425,9 @@ export function DetailPanel() {
               </div>
             </div>
             <div className="grid gap-1.5">
-              <Label>Geschlecht bei Geburt</Label>
+              <Label>{t('birth.gender')}</Label>
               <Select
-                items={BIRTH_GENDER_OPTIONS}
+                items={birthGenderOptions}
                 value={person.birthGender ?? 'none'}
                 onValueChange={(value) =>
                   patch({ birthGender: value === 'none' ? undefined : (value as Gender) })
@@ -432,7 +437,7 @@ export function DetailPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {BIRTH_GENDER_OPTIONS.map((o) => (
+                  {birthGenderOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>
@@ -443,7 +448,7 @@ export function DetailPanel() {
           </section>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="pf-notes">Notizen</Label>
+            <Label htmlFor="pf-notes">{t('field.notes')}</Label>
             <Textarea
               id="pf-notes"
               rows={3}
@@ -456,7 +461,7 @@ export function DetailPanel() {
 
           <section className="grid gap-2">
             <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <UsersIcon className="size-3.5" /> Eltern
+              <UsersIcon className="size-3.5" /> {t('section.parents')}
             </h3>
             {parents.length > 0 && parentUnion && (
               <div className="grid gap-1">
@@ -464,7 +469,7 @@ export function DetailPanel() {
                   <RelationRow
                     key={p.id}
                     person={p}
-                    unlinkLabel={`${displayName(p)} als Elternteil lösen`}
+                    unlinkLabel={t('relation.unlinkParent', { name: displayName(p) })}
                     onUnlink={() => unlinkPartner(parentUnion.id, p.id)}
                   />
                 ))}
@@ -474,7 +479,7 @@ export function DetailPanel() {
                   className="justify-start text-muted-foreground"
                   onClick={() => unlinkChild(parentUnion.id, person.id)}
                 >
-                  <Link2OffIcon /> Von Eltern lösen
+                  <Link2OffIcon /> {t('parents.unlink')}
                 </Button>
               </div>
             )}
@@ -482,15 +487,15 @@ export function DetailPanel() {
               <div className="flex flex-wrap gap-2">
                 {parents.length === 0 ? (
                   <Button variant="outline" size="sm" onClick={() => addParents(person.id)}>
-                    <UserPlusIcon /> Eltern hinzufügen
+                    <UserPlusIcon /> {t('parents.add')}
                   </Button>
                 ) : (
                   <Button variant="outline" size="sm" onClick={() => addParent(person.id)}>
-                    <UserPlusIcon /> Elternteil hinzufügen
+                    <UserPlusIcon /> {t('parent.add')}
                   </Button>
                 )}
                 <Button variant="outline" size="sm" onClick={() => setPicker({ kind: 'parent' })}>
-                  <Link2Icon /> Verknüpfen
+                  <Link2Icon /> {t('action.link')}
                 </Button>
               </div>
             )}
@@ -499,7 +504,7 @@ export function DetailPanel() {
           {(siblings.length > 0 || halfSiblings.length > 0) && (
             <section className="grid gap-2">
               <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <UsersIcon className="size-3.5" /> Geschwister
+                <UsersIcon className="size-3.5" /> {t('section.siblings')}
               </h3>
               <div className="grid gap-1">
                 {siblings.map((s) => (
@@ -508,7 +513,7 @@ export function DetailPanel() {
                 {halfSiblings.map((s) => (
                   <div key={s.id} className="flex items-baseline justify-between gap-2">
                     <PersonLink person={s} />
-                    <span className="shrink-0 text-xs text-muted-foreground italic">halb</span>
+                    <span className="shrink-0 text-xs text-muted-foreground italic">{t('siblings.half')}</span>
                   </div>
                 ))}
               </div>
@@ -517,7 +522,7 @@ export function DetailPanel() {
 
           <section className="grid gap-2">
             <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <HeartIcon className="size-3.5" /> Partnerschaften &amp; Kinder
+              <HeartIcon className="size-3.5" /> {t('section.unions')}
             </h3>
             {ownUnions.map((union) => {
               const partners = union.partnerIds
@@ -534,12 +539,12 @@ export function DetailPanel() {
                       <RelationRow
                         key={p.id}
                         person={p}
-                        unlinkLabel={`${displayName(p)} als Partner lösen`}
+                        unlinkLabel={t('relation.unlinkPartner', { name: displayName(p) })}
                         onUnlink={() => unlinkPartner(union.id, p.id)}
                       />
                     ))
                   ) : (
-                    <span className="text-sm text-muted-foreground">Ohne Partner:in</span>
+                    <span className="text-sm text-muted-foreground">{t('unions.noPartner')}</span>
                   )}
                   {children.length > 0 && (
                     <div className="grid gap-1 border-l-2 pl-2.5">
@@ -547,7 +552,7 @@ export function DetailPanel() {
                         <RelationRow
                           key={c.id}
                           person={c}
-                          unlinkLabel={`${displayName(c)} als Kind lösen`}
+                          unlinkLabel={t('relation.unlinkChild', { name: displayName(c) })}
                           onUnlink={() => unlinkChild(union.id, c.id)}
                         />
                       ))}
@@ -559,14 +564,14 @@ export function DetailPanel() {
                       size="sm"
                       onClick={() => addChild(person.id, union.id)}
                     >
-                      <BabyIcon /> Kind hinzufügen
+                      <BabyIcon /> {t('child.add')}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setPicker({ kind: 'child', unionId: union.id })}
                     >
-                      <Link2Icon /> Verknüpfen
+                      <Link2Icon /> {t('action.link')}
                     </Button>
                   </div>
                 </div>
@@ -574,10 +579,10 @@ export function DetailPanel() {
             })}
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => addPartner(person.id)}>
-                <UserPlusIcon /> Partner hinzufügen
+                <UserPlusIcon /> {t('partner.add')}
               </Button>
               <Button variant="outline" size="sm" onClick={() => setPicker({ kind: 'partner' })}>
-                <Link2Icon /> Verknüpfen
+                <Link2Icon /> {t('action.link')}
               </Button>
             </div>
             {ownUnions.length === 0 && (
@@ -586,7 +591,7 @@ export function DetailPanel() {
                   <BabyIcon /> Kind hinzufügen
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setPicker({ kind: 'child' })}>
-                  <Link2Icon /> Verknüpfen
+                  <Link2Icon /> {t('action.link')}
                 </Button>
               </div>
             )}
@@ -595,7 +600,7 @@ export function DetailPanel() {
           <Separator />
 
           <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
-            <Trash2Icon /> Person löschen
+            <Trash2Icon /> {t('person.delete')}
           </Button>
         </div>
       </ScrollArea>
@@ -616,14 +621,13 @@ export function DetailPanel() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{displayName(person)} löschen?</AlertDialogTitle>
+            <AlertDialogTitle>{t('delete.title', { name: displayName(person) })}</AlertDialogTitle>
             <AlertDialogDescription>
-              Die Person wird aus dem Stammbaum entfernt. Verbindungen zu Partnern und Kindern
-              werden gelöst.
+              {t('delete.body')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel>{t('action.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -631,7 +635,7 @@ export function DetailPanel() {
                 setDeleteOpen(false)
               }}
             >
-              Löschen
+              {t('action.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

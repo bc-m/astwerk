@@ -43,36 +43,34 @@ export interface TreeFile {
   unions: Union[]
 }
 
-export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
-  {value: 'f', label: 'weiblich'},
-  {value: 'm', label: 'männlich'},
-  {value: 'd', label: 'divers'},
-  {value: 'u', label: 'unbekannt'},
-]
+/** Selectable gender values, in display order. Labels come from i18n (`gender.*`). */
+export const GENDER_VALUES: Gender[] = ['f', 'm', 'd', 'u']
 
 export interface CountryOption {
   code: string
-  label: string
   flag: string
 }
 
-/** Countries offered for a person's residence, with their flag emoji. */
+/**
+ * Countries offered for a person's residence, with their flag emoji.
+ * Human-readable names are resolved per language via `countryLabel()` in i18n.
+ */
 export const COUNTRY_OPTIONS: CountryOption[] = [
-  {code: 'DE', label: 'Deutschland', flag: '🇩🇪'},
-  {code: 'AT', label: 'Österreich', flag: '🇦🇹'},
-  {code: 'CH', label: 'Schweiz', flag: '🇨🇭'},
-  {code: 'DK', label: 'Dänemark', flag: '🇩🇰'},
-  {code: 'SE', label: 'Schweden', flag: '🇸🇪'},
-  {code: 'NO', label: 'Norwegen', flag: '🇳🇴'},
-  {code: 'NL', label: 'Niederlande', flag: '🇳🇱'},
-  {code: 'PT', label: 'Portugal', flag: '🇵🇹'},
-  {code: 'ES', label: 'Spanien', flag: '🇪🇸'},
-  {code: 'FR', label: 'Frankreich', flag: '🇫🇷'},
-  {code: 'IT', label: 'Italien', flag: '🇮🇹'},
-  {code: 'GB', label: 'Vereinigtes Königreich', flag: '🇬🇧'},
-  {code: 'US', label: 'USA', flag: '🇺🇸'},
+  {code: 'DE', flag: '🇩🇪'},
+  {code: 'AT', flag: '🇦🇹'},
+  {code: 'CH', flag: '🇨🇭'},
+  {code: 'DK', flag: '🇩🇰'},
+  {code: 'SE', flag: '🇸🇪'},
+  {code: 'NO', flag: '🇳🇴'},
+  {code: 'NL', flag: '🇳🇱'},
+  {code: 'PT', flag: '🇵🇹'},
+  {code: 'ES', flag: '🇪🇸'},
+  {code: 'FR', flag: '🇫🇷'},
+  {code: 'IT', flag: '🇮🇹'},
+  {code: 'GB', flag: '🇬🇧'},
+  {code: 'US', flag: '🇺🇸'},
 ]
 
-export const COUNTRY_BY_CODE: Record<string, CountryOption> = Object.fromEntries(
-  COUNTRY_OPTIONS.map((c) => [c.code, c]),
+export const COUNTRY_FLAG: Record<string, string> = Object.fromEntries(
+  COUNTRY_OPTIONS.map((c) => [c.code, c.flag]),
 )

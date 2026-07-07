@@ -1,4 +1,5 @@
 import { exportGedcom } from '@/lib/gedcom'
+import { t } from '@/lib/i18n'
 import type { Gender, Person, TreeFile, Union } from '@/types'
 
 const GENDERS: Gender[] = ['m', 'f', 'd', 'u']
@@ -13,17 +14,17 @@ export function parseTreeFile(text: string): TreeFile {
   try {
     raw = JSON.parse(text)
   } catch {
-    throw new Error('Die Datei enthält kein gültiges JSON.')
+    throw new Error(t('io.error.invalidJson'))
   }
   if (typeof raw !== 'object' || raw === null) {
-    throw new Error('Unerwartetes Dateiformat.')
+    throw new Error(t('io.error.unexpectedFormat'))
   }
   const obj = raw as Record<string, unknown>
   if (!Array.isArray(obj.persons) || !Array.isArray(obj.unions)) {
-    throw new Error('Der Datei fehlen die Listen "persons" und "unions".')
+    throw new Error(t('io.error.missingLists'))
   }
   if (obj.version !== undefined && obj.version !== 1) {
-    throw new Error(`Nicht unterstützte Dateiversion: ${String(obj.version)}`)
+    throw new Error(t('io.error.unsupportedVersion', { version: String(obj.version) }))
   }
 
   const persons: Person[] = []
@@ -66,7 +67,7 @@ export function parseTreeFile(text: string): TreeFile {
   return {
     format: 'stammbaum',
     version: 1,
-    name: str(obj.name) ?? 'Importierter Stammbaum',
+    name: str(obj.name) ?? t('io.importedTreeName'),
     persons,
     unions,
   }
@@ -91,12 +92,12 @@ function triggerDownload(filename: string, blob: Blob) {
 
 export function downloadTreeFile(file: TreeFile) {
   const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' })
-  triggerDownload(`${slugify(file.name) || 'stammbaum'}_${timestampSuffix()}.json`, blob)
+  triggerDownload(`${slugify(file.name) || t('io.filenameFallback')}_${timestampSuffix()}.json`, blob)
 }
 
 export function downloadGedcomFile(file: TreeFile) {
   const blob = new Blob([exportGedcom(file)], { type: 'text/plain;charset=utf-8' })
-  triggerDownload(`${slugify(file.name) || 'stammbaum'}_${timestampSuffix()}.ged`, blob)
+  triggerDownload(`${slugify(file.name) || t('io.filenameFallback')}_${timestampSuffix()}.ged`, blob)
 }
 
 /** Timestamp for filenames in YYYYMMDD_hhmmss format. */

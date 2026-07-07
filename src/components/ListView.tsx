@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { NetworkIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useT } from '@/lib/i18n'
 import { ageLabel, ageOf, birthNameLabel, displayName, initials, isDeceased } from '@/lib/person'
 import { useTreeStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
@@ -22,6 +23,7 @@ function matches(person: Person, query: string): boolean {
 }
 
 export function ListView() {
+  const t = useT()
   const persons = useTreeStore((s) => s.persons)
   const selectedPersonId = useTreeStore((s) => s.selectedPersonId)
   const selectPerson = useTreeStore((s) => s.selectPerson)
@@ -44,7 +46,7 @@ export function ListView() {
     <div className="flex h-full flex-col">
       <div className="border-b bg-card px-4 py-2.5">
         <Input
-          placeholder="Personen durchsuchen…"
+          placeholder={t('list.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="h-8 max-w-xs"
@@ -54,11 +56,11 @@ export function ListView() {
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-card text-left text-xs text-muted-foreground shadow-[0_1px_0_var(--color-border)]">
             <tr>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Geboren</th>
-              <th className="px-4 py-2 font-medium">Gestorben</th>
-              <th className="px-4 py-2 font-medium">Alter</th>
-              <th className="px-4 py-2 font-medium">Geburtsort</th>
+              <th className="px-4 py-2 font-medium">{t('list.col.name')}</th>
+              <th className="px-4 py-2 font-medium">{t('list.col.born')}</th>
+              <th className="px-4 py-2 font-medium">{t('list.col.died')}</th>
+              <th className="px-4 py-2 font-medium">{t('list.col.age')}</th>
+              <th className="px-4 py-2 font-medium">{t('list.col.birthplace')}</th>
               <th className="w-12 px-2 py-2" />
             </tr>
           </thead>
@@ -101,7 +103,7 @@ export function ListView() {
                     <span className="inline-flex items-center gap-1 tabular-nums">
                       {(ageOf(p) ?? 1) < 1 ? ageLabel(p) : (ageOf(p) ?? '')}
                       {isDeceased(p) && (
-                        <span className="text-muted-foreground" title="verstorben">
+                        <span className="text-muted-foreground" title={t('list.deceased')}>
                           †
                         </span>
                       )}
@@ -113,8 +115,8 @@ export function ListView() {
                       variant="ghost"
                       size="sm"
                       className="size-7 p-0 text-muted-foreground"
-                      aria-label={`${displayName(p)} im Baum zeigen`}
-                      title="Im Baum zeigen"
+                      aria-label={t('list.showInTree.aria', { name: displayName(p) })}
+                      title={t('list.showInTree')}
                       onClick={(e) => {
                         e.stopPropagation()
                         setViewMode('tree')
@@ -132,8 +134,8 @@ export function ListView() {
         {list.length === 0 && (
           <p className="p-8 text-center text-sm text-muted-foreground">
             {Object.keys(persons).length === 0
-              ? 'Noch keine Personen vorhanden.'
-              : 'Keine Personen gefunden.'}
+              ? t('list.empty.none')
+              : t('list.empty.noMatch')}
           </p>
         )}
       </div>

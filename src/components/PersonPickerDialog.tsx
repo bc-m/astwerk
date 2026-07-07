@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { useT } from '@/lib/i18n'
 import { displayName, lifespanLabel } from '@/lib/person'
 import type { Person } from '@/types'
 
@@ -27,6 +28,7 @@ export function PersonPickerDialog({
   candidates,
   onPick,
 }: PersonPickerDialogProps) {
+  const t = useT()
   const [query, setQuery] = useState('')
 
   useEffect(() => {
@@ -53,14 +55,14 @@ export function PersonPickerDialog({
         </DialogHeader>
         <Input
           autoFocus
-          placeholder="Suchen…"
+          placeholder={t('action.search')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <div className="-mx-1 max-h-64 overflow-y-auto px-1">
           {filtered.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              Keine passende Person gefunden.
+              {t('picker.empty')}
             </p>
           ) : (
             <div className="grid gap-0.5">

@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n'
 import type { Gender, Person, TreeFile, Union } from '@/types'
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -207,7 +208,7 @@ export function parseGedcom(text: string, fallbackName: string): TreeFile {
   const roots = parseGedcomLines(text)
   const indiRecords = roots.filter((r) => r.tag === 'INDI')
   if (indiRecords.length === 0) {
-    throw new Error('Die Datei enthält keine GEDCOM-Personendaten (INDI).')
+    throw new Error(t('io.error.noGedcom'))
   }
 
   // Standalone NOTE records for references like "1 NOTE @N1@"

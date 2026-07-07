@@ -1,6 +1,7 @@
 import {create} from 'zustand'
 import {persist} from 'zustand/middleware'
 import {temporal} from 'zundo'
+import {t} from '@/lib/i18n'
 import type {Person, TreeFile, Union} from '@/types'
 import {ancestorIdsOf, descendantIdsOf, parentUnionOf} from '@/lib/relations'
 
@@ -79,7 +80,7 @@ export const useTreeStore = create<TreeState>()(
   persist(
     temporal(
       (set, get) => ({
-        treeName: 'Mein Stammbaum',
+        treeName: t('io.defaultTreeName'),
         persons: {},
         unions: {},
         selectedPersonId: null,
@@ -335,7 +336,7 @@ export const useTreeStore = create<TreeState>()(
 
         reset: () =>
           set({
-            treeName: 'Mein Stammbaum',
+            treeName: t('io.defaultTreeName'),
             persons: {},
             unions: {},
             selectedPersonId: null,

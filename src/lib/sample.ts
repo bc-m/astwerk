@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n'
 import type { Person, TreeFile, Union } from '@/types'
 
 /** Small sample family tree spanning three generations. */
@@ -75,7 +76,7 @@ export function createSampleTree(): TreeFile {
   return {
     format: 'stammbaum',
     version: 1,
-    name: 'Familie Schmidt (Beispiel)',
+    name: t('sample.treeName'),
     persons: [wilhelm, margarete, hans, ursula, renate, julia, thomas],
     unions: [grosseltern, eltern],
   }
